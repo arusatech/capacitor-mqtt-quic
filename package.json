@@ -1,0 +1,54 @@
+{
+  "name": "@annadata/capacitor-mqtt-quic",
+  "version": "0.1.0",
+  "description": "MQTT-over-QUIC client for Capacitor (iOS/Android). Uses ngtcp2 for QUIC; MQTT over WebSocket fallback on web.",
+  "main": "dist/plugin.cjs.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "unpkg": "dist/plugin.js",
+  "files": [
+    "dist",
+    "ios",
+    "android"
+  ],
+  "scripts": {
+    "build": "npm run build:tsc && npm run build:rollup",
+    "build:tsc": "tsc",
+    "build:rollup": "rollup -c rollup.config.js",
+    "watch": "rollup -c rollup.config.js -w",
+    "lint": "eslint src --ext ts"
+  },
+  "keywords": [
+    "capacitor",
+    "plugin",
+    "native",
+    "mqtt",
+    "quic",
+    "ngtcp2"
+  ],
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    },
+    "android": {
+      "src": "android"
+    }
+  },
+  "devDependencies": {
+    "@capacitor/android": "^7.4.4",
+    "@capacitor/cli": "^7.4.3",
+    "@capacitor/core": "^7.4.3",
+    "@capacitor/ios": "^7.4.4",
+    "@types/node": "^22.10.0",
+    "eslint": "^9.20.1",
+    "rollup": "^4.28.1",
+    "typescript": "~5.6.0"
+  },
+  "peerDependencies": {
+    "@capacitor/core": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
