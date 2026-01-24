@@ -82,7 +82,7 @@ class NGTCP2Client : QuicClient {
         }
         
         val streamId = nativeOpenStream(connHandle)
-        if (streamId == 0L) {
+        if (streamId < 0L) {
             throw IllegalStateException("Failed to open QUIC stream: ${nativeGetLastError(connHandle)}")
         }
         
