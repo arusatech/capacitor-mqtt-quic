@@ -1,0 +1,188 @@
+#!/bin/bash
+#
+# Build script for ngtcp2 on iOS
+# 
+# This script builds ngtcp2 as a static library for iOS.
+# It requires:
+# - Xcode 14+ (for iOS 15+)
+# - CMake 3.20+
+# - iOS SDK 15.0+
+# - OpenSSL 3.0+ (built for iOS)
+#
+# Usage:
+#   ./build-ngtcp2.sh [--openssl-path PATH] [--arch ARCH] [--sdk SDK]
+#
+# Example:
+#   ./build-ngtcp2.sh --openssl-path /path/to/openssl-ios --arch arm64 --sdk iphoneos
+#
+
+set -e
+
+# Default values
+NGTCP2_SOURCE_DIR="${NGTCP2_SOURCE_DIR:-../ngtcp2}"
+OPENSSL_PATH="${OPENSSL_PATH:-}"
+ARCH="${ARCH:-arm64}"
+SDK="${SDK:-iphoneos}"
+BUILD_TYPE="${BUILD_TYPE:-Release}"
+IOS_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET:-15.0}"
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --openssl-path)
+            OPENSSL_PATH="$2"
+            shift 2
+            ;;
+        --arch)
+            ARCH="$2"
+            shift 2
+            ;;
+        --sdk)
+            SDK="$2"
+            shift 2
+            ;;
+        --build-type)
+            BUILD_TYPE="$2"
+            shift 2
+            ;;
+        --ios-deployment-target)
+            IOS_DEPLOYMENT_TARGET="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--openssl-path PATH] [--arch ARCH] [--sdk SDK]"
+            exit 1
+            ;;
+    esac
+done
+
+# Check prerequisites
+if ! command -v cmake &> /dev/null; then
+    echo "Error: CMake is not installed. Please install CMake 3.20+"
+    exit 1
+fi
+
+if ! command -v xcrun &> /dev/null; then
+    echo "Error: Xcode command line tools are not installed"
+    exit 1
+fi
+
+# Get iOS SDK path
+IOS_SDK_PATH=$(xcrun --sdk "$SDK" --show-sdk-path)
+if [ -z "$IOS_SDK_PATH" ]; then
+    echo "Error: Could not find iOS SDK for $SDK"
+    exit 1
+fi
+
+echo "Building ngtcp2 for iOS"
+echo "  Architecture: $ARCH"
+echo "  SDK: $SDK"
+echo "  SDK Path: $IOS_SDK_PATH"
+echo "  Build Type: $BUILD_TYPE"
+echo "  Deployment Target: iOS $IOS_DEPLOYMENT_TARGET"
+
+# Check if ngtcp2 source exists
+if [ ! -d "$NGTCP2_SOURCE_DIR" ]; then
+    echo "Error: ngtcp2 source directory not found: $NGTCP2_SOURCE_DIR"
+    echo "Please set NGTCP2_SOURCE_DIR environment variable or clone ngtcp2:"
+    echo "  git clone https://github.com/ngtcp2/ngtcp2.git $NGTCP2_SOURCE_DIR"
+    exit 1
+fi
+
+# Check OpenSSL
+if [ -z "$OPENSSL_PATH" ]; then
+    echo "Warning: OpenSSL path not specified. ngtcp2 will be built without TLS support."
+    echo "To build with OpenSSL, use: --openssl-path /path/to/openssl-ios"
+    echo ""
+    echo "You can build OpenSSL for iOS using:"
+    echo "  git clone https://github.com/openssl/openssl.git"
+    echo "  cd openssl"
+    echo "  ./Configure ios64-cross --prefix=/tmp/openssl-ios no-shared no-tests"
+    echo "  make -j\$(sysctl -n hw.ncpu)"
+    echo "  make install"
+    exit 1
+fi
+
+# Verify OpenSSL installation
+if [ ! -d "$OPENSSL_PATH" ]; then
+    echo "Error: OpenSSL path does not exist: $OPENSSL_PATH"
+    exit 1
+fi
+
+# Check for required OpenSSL files
+OPENSSL_LIB_DIR="$OPENSSL_PATH/lib"
+OPENSSL_INCLUDE_DIR="$OPENSSL_PATH/include"
+OPENSSL_CRYPTO_LIB="$OPENSSL_LIB_DIR/libcrypto.a"
+OPENSSL_SSL_LIB="$OPENSSL_LIB_DIR/libssl.a"
+
+if [ ! -f "$OPENSSL_CRYPTO_LIB" ]; then
+    echo "Error: OpenSSL crypto library not found: $OPENSSL_CRYPTO_LIB"
+    echo "Please ensure OpenSSL is built and installed correctly"
+    exit 1
+fi
+
+if [ ! -f "$OPENSSL_SSL_LIB" ]; then
+    echo "Error: OpenSSL SSL library not found: $OPENSSL_SSL_LIB"
+    echo "Please ensure OpenSSL is built and installed correctly"
+    exit 1
+fi
+
+if [ ! -d "$OPENSSL_INCLUDE_DIR" ]; then
+    echo "Error: OpenSSL include directory not found: $OPENSSL_INCLUDE_DIR"
+    echo "Please ensure OpenSSL is built and installed correctly"
+    exit 1
+fi
+
+echo "  OpenSSL Path: $OPENSSL_PATH"
+echo "  OpenSSL Libraries: $OPENSSL_LIB_DIR"
+echo "  OpenSSL Headers: $OPENSSL_INCLUDE_DIR"
+
+# Create build directory
+BUILD_DIR="build/ios-$ARCH"
+mkdir -p "$BUILD_DIR"
+cd "$BUILD_DIR"
+
+# Configure CMake
+CMAKE_ARGS=(
+    -DCMAKE_SYSTEM_NAME=iOS
+    -DCMAKE_OSX_DEPLOYMENT_TARGET="$IOS_DEPLOYMENT_TARGET"
+    -DCMAKE_OSX_ARCHITECTURES="$ARCH"
+    -DCMAKE_OSX_SYSROOT="$IOS_SDK_PATH"
+    -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
+    -DENABLE_LIB_ONLY=ON
+    -DCMAKE_INSTALL_PREFIX="$(pwd)/install"
+)
+
+if [ -n "$OPENSSL_PATH" ]; then
+    # CMake's FindOpenSSL needs explicit paths
+    CMAKE_ARGS+=(
+        -DENABLE_OPENSSL=ON
+        -DOPENSSL_ROOT_DIR="$OPENSSL_PATH"
+        -DOPENSSL_CRYPTO_LIBRARY="$OPENSSL_CRYPTO_LIB"
+        -DOPENSSL_SSL_LIBRARY="$OPENSSL_SSL_LIB"
+        -DOPENSSL_INCLUDE_DIR="$OPENSSL_INCLUDE_DIR"
+        -DOPENSSL_LIBRARIES="$OPENSSL_SSL_LIB;$OPENSSL_CRYPTO_LIB"
+    )
+else
+    CMAKE_ARGS+=(
+        -DENABLE_OPENSSL=OFF
+    )
+fi
+
+echo ""
+echo "Configuring CMake..."
+cmake "$NGTCP2_SOURCE_DIR" "${CMAKE_ARGS[@]}"
+
+echo ""
+echo "Building ngtcp2..."
+cmake --build . --config "$BUILD_TYPE" -j$(sysctl -n hw.ncpu)
+
+echo ""
+echo "Installing..."
+cmake --install .
+
+echo ""
+echo "Build complete!"
+echo "Static library: $(pwd)/install/lib/libngtcp2.a"
+echo "Headers: $(pwd)/install/include"

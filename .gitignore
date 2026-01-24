@@ -1,0 +1,93 @@
+# Build artifacts and install directories
+install/
+build/
+dist/
+ngtcp2/
+openssl/
+openssl-*/
+openssl-*.tar.gz
+ngtcp2-*/
+ngtcp2-*.tar.gz
+node_modules/
+*.a
+*.so
+*.dylib
+*.framework
+*.xcframework
+
+# iOS specific
+ios/install/
+ios/build/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcworkspace/xcshareddata/
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Android specific
+android/install/
+android/build/
+android/.gradle/
+android/local.properties
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Node.js / Capacitor
+node_modules/
+package-lock.json
+yarn.lock
+.pnp/
+.pnp.js
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+
+# OpenSSL source (if downloaded)
+openssl-*/
+openssl-*.tar.gz
+
+# ngtcp2 source (if downloaded)
+ngtcp2-*/
+ngtcp2-*.tar.gz
+
+# Test artifacts
+coverage/
+.nyc_output/
+*.lcov
+
+# Environment files
+.env
+.env.local
+.env.*.local

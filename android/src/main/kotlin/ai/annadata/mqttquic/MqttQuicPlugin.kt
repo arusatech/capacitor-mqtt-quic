@@ -38,7 +38,6 @@ class MqttQuicPlugin : Plugin() {
             "3.1.1" -> MQTTClient.ProtocolVersion.V311
             else -> MQTTClient.ProtocolVersion.AUTO
         }
-        client = MQTTClient(protocolVersion)
 
         if (host.isEmpty() || clientId.isEmpty()) {
             call.reject("host and clientId are required")
@@ -47,6 +46,10 @@ class MqttQuicPlugin : Plugin() {
 
         scope.launch {
             try {
+                if (client.getState() == MQTTClient.State.CONNECTED) {
+                    client.disconnect()
+                }
+                client = MQTTClient(protocolVersion)
                 client.connect(host, port, clientId, username, password, cleanSession, keepalive, sessionExpiryInterval)
                 call.resolve(JSObject().put("connected", true))
             } catch (e: Exception) {
@@ -70,7 +73,6 @@ class MqttQuicPlugin : Plugin() {
     @PluginMethod
     fun publish(call: PluginCall) {
         val topic = call.getString("topic") ?: ""
-        val payload = call.getString("payload") ?: ""
         val qos = call.getInt("qos", 0)
         val messageExpiryInterval = call.getInt("messageExpiryInterval")
         val contentType = call.getString("contentType")
@@ -80,9 +82,23 @@ class MqttQuicPlugin : Plugin() {
             return
         }
 
+        val data: ByteArray = when {
+            call.getString("payload") != null ->
+                call.getString("payload")!!.toByteArray(StandardCharsets.UTF_8)
+            call.getArray("payload") != null -> {
+                val arr = call.getArray("payload")!!
+                (0 until arr.length()).mapNotNull { i ->
+                    (arr.get(i) as? Number)?.toInt()?.and(0xFF)?.toByte()
+                }.toByteArray()
+            }
+            else -> {
+                call.reject("payload must be string or number array")
+                return
+            }
+        }
+
         scope.launch {
             try {
-                val data = payload.toByteArray(StandardCharsets.UTF_8)
                 val properties = mutableMapOf<Int, Any>()
                 messageExpiryInterval?.let { properties[MQTT5PropertyType.MESSAGE_EXPIRY_INTERVAL.toInt()] = it }
                 contentType?.let { properties[MQTT5PropertyType.CONTENT_TYPE.toInt()] = it }

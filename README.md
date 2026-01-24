@@ -261,11 +261,20 @@ await MqttQuic.connect({
 - [ngtcp2 Integration Plan](./NGTCP2_INTEGRATION_PLAN.md) - Build instructions for real QUIC
 - [MQTT Version Analysis](./MQTT_VERSION_ANALYSIS.md) - Why MQTT 5.0?
 
+## Web/PWA Support
+
+On **web** (including PWA), the plugin uses **MQTT over WebSocket (WSS)** via `mqtt.js`. No QUIC; same API.
+
+- **Connect:** `ws://host:port` or `wss://host:port` (wss when port is 8884 or 443)
+- **Build:** Ensure `mqtt` is installed (`npm install` in the plugin directory)
+- Use `MqttQuic.connect` / `publish` / `subscribe` / `unsubscribe` / `disconnect` as on native
+
 ## Compatibility
 
 - **MQTT Protocol:** 3.1.1 and 5.0 (auto-negotiation)
 - **iOS:** 15.0+ (for Network framework)
 - **Android:** API 21+ (Android 5.0+)
+- **Web/PWA:** mqtt.js over WSS
 - **Capacitor:** 7.0+
 - **QUIC:** ngtcp2 1.21.0+ (when integrated)
 

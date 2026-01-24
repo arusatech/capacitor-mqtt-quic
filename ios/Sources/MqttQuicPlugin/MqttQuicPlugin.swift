@@ -26,14 +26,12 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
         let protocolVersionStr = call.getString("protocolVersion") ?? "auto"
         let sessionExpiryInterval = call.getInt("sessionExpiryInterval")
         
-        // Set protocol version
         let protocolVersion: MQTTClient.ProtocolVersion
         switch protocolVersionStr {
         case "5.0": protocolVersion = .v5
         case "3.1.1": protocolVersion = .v311
         default: protocolVersion = .auto
         }
-        client = MQTTClient(protocolVersion: protocolVersion)
 
         guard !host.isEmpty, !clientId.isEmpty else {
             call.reject("host and clientId are required")
@@ -42,6 +40,10 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
 
         Task {
             do {
+                if case .connected = client.getState() {
+                    try? await client.disconnect()
+                }
+                client = MQTTClient(protocolVersion: protocolVersion)
                 try await client.connect(
                     host: host,
                     port: UInt16(port),
@@ -72,7 +74,6 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func publish(_ call: CAPPluginCall) {
         let topic = call.getString("topic") ?? ""
-        let payload = call.getString("payload") ?? ""
         let qos = call.getInt("qos") ?? 0
         let messageExpiryInterval = call.getInt("messageExpiryInterval")
         let contentType = call.getString("contentType")
@@ -82,9 +83,18 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
+        let data: Data
+        if let payloadStr = call.getString("payload") {
+            data = Data(payloadStr.utf8)
+        } else if let arr = call.getArray("payload") as? [NSNumber] {
+            data = Data(arr.map { UInt8(truncating: $0) })
+        } else {
+            call.reject("payload must be string or number array")
+            return
+        }
+
         Task {
             do {
-                let data = Data(payload.utf8)
                 var properties: [UInt8: Any]? = nil
                 if messageExpiryInterval != nil || contentType != nil {
                     properties = [:]
@@ -131,6 +141,13 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        call.resolve(["success": true])
+        Task {
+            do {
+                try await client.unsubscribe(topic: topic)
+                call.resolve(["success": true])
+            } catch {
+                call.reject("\(error)")
+            }
+        }
     }
 }

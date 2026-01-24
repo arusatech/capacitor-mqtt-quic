@@ -47,6 +47,10 @@ public final class MQTTClient {
 
     public func connect(host: String, port: UInt16, clientId: String, username: String?, password: String?, cleanSession: Bool, keepalive: UInt16, sessionExpiryInterval: UInt32? = nil) async throws {
         lock.lock()
+        if case .connecting = state {
+            lock.unlock()
+            throw MQTTProtocolError.insufficientData("already connecting")
+        }
         state = .connecting
         lock.unlock()
 
@@ -141,8 +145,14 @@ public final class MQTTClient {
             startMessageLoop()
         } catch {
             lock.lock()
+            let w = writer
+            quicClient = nil
+            stream = nil
+            reader = nil
+            writer = nil
             state = .error("\(error)")
             lock.unlock()
+            try? await w?.close()
             throw error
         }
     }
@@ -226,8 +236,11 @@ public final class MQTTClient {
     }
 
     public func disconnect() async throws {
-        messageLoopTask?.cancel()
+        let task = messageLoopTask
         messageLoopTask = nil
+        task?.cancel()
+        _ = try? await task?.value
+
         lock.lock()
         let w = writer
         let version = activeProtocolVersion
@@ -259,6 +272,8 @@ public final class MQTTClient {
     }
 
     private func nextPacketIdUsed() -> UInt16 {
+        lock.lock()
+        defer { lock.unlock() }
         let pid = nextPacketId
         nextPacketId = nextPacketId &+ 1
         if nextPacketId == 0 { nextPacketId = 1 }
@@ -266,20 +281,26 @@ public final class MQTTClient {
     }
 
     private func startMessageLoop() {
-        messageLoopTask = Task {
-            guard let r = reader else { return }
+        messageLoopTask = Task { [weak self] in
+            guard let self = self else { return }
             while !Task.isCancelled {
+                let r: MQTTStreamReaderProtocol?
+                self.lock.lock()
+                r = self.reader
+                self.lock.unlock()
+                guard let r = r else { break }
+
                 do {
                     let fixed = try await r.readexactly(2)
                     let (msgType, remLen, _) = try MQTTProtocol.parseFixedHeader(Data(fixed))
                     let rest = try await r.readexactly(remLen)
                     let type = msgType & 0xF0
-                    
-                    lock.lock()
-                    let version = activeProtocolVersion
-                    let w = writer
-                    lock.unlock()
-                    
+
+                    self.lock.lock()
+                    let version = self.activeProtocolVersion
+                    let w = self.writer
+                    self.lock.unlock()
+
                     switch type {
                     case MQTTMessageType.PINGREQ.rawValue:
                         if let w = w {
@@ -289,20 +310,22 @@ public final class MQTTClient {
                         }
                     case MQTTMessageType.PUBLISH.rawValue:
                         let qos = (msgType >> 1) & 0x03
-                        // For MQTT 5.0, properties come after topic/packetId, but we can use same parser
-                        // (properties are in the payload section, parsePublish handles topic + packetId + payload)
                         let (topic, packetId, payload, _) = try MQTTProtocol.parsePublish(Data(rest), offset: 0, qos: qos)
-                        
-                        lock.lock()
-                        let cb = subscribedTopics[topic]
-                        lock.unlock()
+
+                        self.lock.lock()
+                        let cb = self.subscribedTopics[topic]
+                        self.lock.unlock()
                         cb?(payload)
-                        
-                        // Send PUBACK if QoS >= 1
-                        if qos >= 1, let pid = packetId, let w = w {
-                            let puback = MQTTProtocol.buildPuback(packetId: pid)
-                            try await w.write(Data(puback))
-                            try await w.drain()
+
+                        if qos >= 1, let pid = packetId {
+                            self.lock.lock()
+                            let wPuback = self.writer
+                            self.lock.unlock()
+                            if let wPuback = wPuback {
+                                let puback = MQTTProtocol.buildPuback(packetId: pid)
+                                try await wPuback.write(Data(puback))
+                                try await wPuback.drain()
+                            }
                         }
                     default:
                         break

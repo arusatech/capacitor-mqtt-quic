@@ -17,8 +17,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.SupervisorJob
 
 /**
  * High-level MQTT client: connect, publish, subscribe, disconnect.
@@ -48,13 +50,13 @@ class MQTTClient {
     private var nextPacketId = 1
     private val subscribedTopics = mutableMapOf<String, (ByteArray) -> Unit>()
     private val lock = Mutex()
-    private val scope = CoroutineScope(Dispatchers.Default)
-    
+    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
     constructor(protocolVersion: ProtocolVersion = ProtocolVersion.AUTO) {
         this.protocolVersion = protocolVersion
     }
 
-    fun getState(): State = kotlinx.coroutines.runBlocking { lock.withLock { state } }
+    fun getState(): State = runBlocking { lock.withLock { state } }
 
     suspend fun connect(
         host: String,
@@ -66,7 +68,12 @@ class MQTTClient {
         keepalive: Int,
         sessionExpiryInterval: Int? = null
     ) {
-        lock.withLock { state = State.CONNECTING }
+        lock.withLock {
+            if (state == State.CONNECTING) {
+                throw IllegalStateException("already connecting")
+            }
+            state = State.CONNECTING
+        }
 
         try {
             val useV5 = protocolVersion == ProtocolVersion.V5 || protocolVersion == ProtocolVersion.AUTO
@@ -142,7 +149,18 @@ class MQTTClient {
             lock.withLock { state = State.CONNECTED }
             startMessageLoop()
         } catch (e: Exception) {
-            lock.withLock { state = State.ERROR }
+            val wr = lock.withLock {
+                val w = writer
+                quicClient = null
+                stream = null
+                reader = null
+                writer = null
+                state = State.ERROR
+                w
+            }
+            try {
+                wr?.close()
+            } catch (_: Exception) { /* ignore */ }
             throw e
         }
     }
@@ -221,18 +239,21 @@ class MQTTClient {
     }
 
     suspend fun disconnect() {
-        messageLoopJob?.cancel()
+        val job = messageLoopJob
         messageLoopJob = null
+        job?.cancel()
+        job?.join()
+
         val (w, version) = lock.withLock {
-            val writer = writer
-            val version = activeProtocolVersion
+            val wr = writer
+            val v = activeProtocolVersion
             quicClient = null
             stream = null
             reader = null
             writer = null
             state = State.DISCONNECTED
             activeProtocolVersion = 0
-            writer to version
+            wr to v
         }
 
         w?.let {
@@ -260,17 +281,17 @@ class MQTTClient {
         }
     }
 
-    private fun nextPacketIdUsed(): Int {
+    private suspend fun nextPacketIdUsed(): Int = lock.withLock {
         val pid = nextPacketId
         nextPacketId = (nextPacketId + 1) % 65536
         if (nextPacketId == 0) nextPacketId = 1
-        return pid
+        pid
     }
 
     private fun startMessageLoop() {
         messageLoopJob = scope.launch {
-            val r = lock.withLock { reader } ?: return@launch
             while (isActive) {
+                val r = lock.withLock { reader } ?: break
                 try {
                     val fixed = r.readexactly(2)
                     val (msgType, remLen, _) = MQTTProtocol.parseFixedHeader(fixed)
@@ -288,13 +309,12 @@ class MQTTClient {
                         MQTTMessageType.PUBLISH -> {
                             val qos = ((msgType.toInt() shr 1) and 0x03).toByte()
                             val (topic, packetId, payload) = MQTTProtocol.parsePublish(rest, 0, qos.toInt())
-                            
-                            val (cb, version) = lock.withLock {
+
+                            val (cb, _) = lock.withLock {
                                 subscribedTopics[topic] to activeProtocolVersion
                             }
                             cb?.invoke(payload)
-                            
-                            // Send PUBACK if QoS >= 1
+
                             if (qos.toInt() >= 1 && packetId != null) {
                                 val w = lock.withLock { writer }
                                 w?.let {
