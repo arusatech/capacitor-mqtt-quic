@@ -2,12 +2,12 @@ prefix=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-qui
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include
-enginesdir=${libdir}/engines-3
+enginesdir=${libdir}/engines-81.3
 modulesdir=${libdir}/ossl-modules
 
 Name: OpenSSL-libcrypto
 Description: OpenSSL cryptography library
-Version: 3.2.0
+Version: 3.1.7+quic
 Libs: -L${libdir} -lcrypto
 Libs.private:  
 Cflags: -I${includedir}

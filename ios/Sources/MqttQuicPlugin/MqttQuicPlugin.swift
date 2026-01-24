@@ -15,6 +15,18 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc override public func load() {}
 
+    private func bundledCaPath() -> String? {
+        let bundle = Bundle(for: MqttQuicPlugin.self)
+        guard let path = bundle.path(forResource: "mqttquic_ca", ofType: "pem") else {
+            return nil
+        }
+        if let contents = try? String(contentsOfFile: path),
+           contents.contains("BEGIN CERTIFICATE") {
+            return path
+        }
+        return nil
+    }
+
     @objc func connect(_ call: CAPPluginCall) {
         let host = call.getString("host") ?? ""
         let port = call.getInt("port") ?? 1884
@@ -25,6 +37,8 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
         let keepalive = call.getInt("keepalive") ?? 60
         let protocolVersionStr = call.getString("protocolVersion") ?? "auto"
         let sessionExpiryInterval = call.getInt("sessionExpiryInterval")
+        let caFile = call.getString("caFile")
+        let caPath = call.getString("caPath")
         
         let protocolVersion: MQTTClient.ProtocolVersion
         switch protocolVersionStr {
@@ -40,6 +54,18 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
 
         Task {
             do {
+                if let caFile = caFile {
+                    setenv("MQTT_QUIC_CA_FILE", caFile, 1)
+                } else if let bundled = bundledCaPath() {
+                    setenv("MQTT_QUIC_CA_FILE", bundled, 1)
+                } else {
+                    unsetenv("MQTT_QUIC_CA_FILE")
+                }
+                if let caPath = caPath {
+                    setenv("MQTT_QUIC_CA_PATH", caPath, 1)
+                } else {
+                    unsetenv("MQTT_QUIC_CA_PATH")
+                }
                 if case .connected = client.getState() {
                     try? await client.disconnect()
                 }
@@ -55,6 +81,56 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
                     sessionExpiryInterval: sessionExpiryInterval != nil ? UInt32(sessionExpiryInterval!) : nil
                 )
                 call.resolve(["connected": true])
+            } catch {
+                call.reject("\(error)")
+            }
+        }
+    }
+
+    @objc func testHarness(_ call: CAPPluginCall) {
+        let host = call.getString("host") ?? ""
+        let port = call.getInt("port") ?? 1884
+        let clientId = call.getString("clientId") ?? "mqttquic_test_client"
+        let topic = call.getString("topic") ?? "test/topic"
+        let payload = call.getString("payload") ?? "Hello QUIC!"
+        let caFile = call.getString("caFile")
+        let caPath = call.getString("caPath")
+
+        if host.isEmpty {
+            call.reject("host is required")
+            return
+        }
+
+        Task {
+            do {
+                if let caFile = caFile {
+                    setenv("MQTT_QUIC_CA_FILE", caFile, 1)
+                } else if let bundled = bundledCaPath() {
+                    setenv("MQTT_QUIC_CA_FILE", bundled, 1)
+                } else {
+                    unsetenv("MQTT_QUIC_CA_FILE")
+                }
+                if let caPath = caPath {
+                    setenv("MQTT_QUIC_CA_PATH", caPath, 1)
+                } else {
+                    unsetenv("MQTT_QUIC_CA_PATH")
+                }
+
+                client = MQTTClient(protocolVersion: .auto)
+                try await client.connect(
+                    host: host,
+                    port: UInt16(port),
+                    clientId: clientId,
+                    username: nil,
+                    password: nil,
+                    cleanSession: true,
+                    keepalive: 60,
+                    sessionExpiryInterval: nil
+                )
+                try await client.subscribe(topic: topic, qos: 0, subscriptionIdentifier: nil)
+                try await client.publish(topic: topic, payload: Data(payload.utf8), qos: 0)
+                try await client.disconnect()
+                call.resolve(["success": true])
             } catch {
                 call.reject("\(error)")
             }

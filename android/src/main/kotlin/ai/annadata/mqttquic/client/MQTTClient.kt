@@ -6,6 +6,7 @@ import ai.annadata.mqttquic.mqtt.MQTTProtocol
 import ai.annadata.mqttquic.mqtt.MQTT5Protocol
 import ai.annadata.mqttquic.mqtt.MQTT5ReasonCode
 import ai.annadata.mqttquic.mqtt.MQTTProtocolLevel
+import ai.annadata.mqttquic.quic.NGTCP2Client
 import ai.annadata.mqttquic.quic.QuicClient
 import ai.annadata.mqttquic.quic.QuicClientStub
 import ai.annadata.mqttquic.quic.QuicStream
@@ -85,7 +86,11 @@ class MQTTClient {
                 connack = MQTTProtocol.buildConnack(MQTTConnAckCode.ACCEPTED)
             }
             
-            val quic = QuicClientStub(connack.toList())
+            val quic: QuicClient = if (NGTCP2Client.isAvailable()) {
+                NGTCP2Client()
+            } else {
+                QuicClientStub(connack.toList())
+            }
             quic.connect(host, port)
             val s = quic.openStream()
             val r = QUICStreamReader(s)

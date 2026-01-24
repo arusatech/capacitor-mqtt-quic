@@ -24,7 +24,7 @@
 
 ---
 
-### Phase 2: QUIC Transport Integration (ngtcp2) ✅
+### Phase 2: QUIC Transport Integration (ngtcp2 + nghttp3) ✅
 **Status:** Structure complete, ngtcp2 build pending
 
 **iOS (Swift):**
@@ -37,9 +37,9 @@
 - `quic/QuicClientStub.kt` - Stub QUIC client (uses mock transport)
 - `transport/QUICStreamAdapter.kt` - StreamReader/Writer adapters over QUIC stream
 
-**Next Steps (ngtcp2 Integration):**
-1. **iOS:** Build ngtcp2 + OpenSSL/BoringSSL as static libraries, integrate via Xcode
-2. **Android:** Build ngtcp2 with NDK (CMake), produce `libngtcp2_client.so`
+**Next Steps (ngtcp2/nghttp3 Integration):**
+1. **iOS:** Build ngtcp2/nghttp3 + OpenSSL/BoringSSL as static libraries, integrate via Xcode
+2. **Android:** Build ngtcp2/nghttp3 with NDK (CMake), produce `libngtcp2_client.so`
 3. Replace `QuicClientStub` with real ngtcp2-backed implementations
 4. Implement UDP: iOS `NWConnection`, Android `DatagramSocket`
 5. TLS 1.3 handshake integration
@@ -96,17 +96,17 @@
 
 ## 📋 Remaining Work
 
-### Critical: ngtcp2 Build and Integration
+### Critical: ngtcp2/nghttp3 Build and Integration
 
 **iOS:**
-1. Build ngtcp2 + TLS library (OpenSSL or BoringSSL) as static libs
+1. Build ngtcp2/nghttp3 + TLS library (OpenSSL or BoringSSL) as static libs
 2. Add to Xcode project (CocoaPods/SPM/vendored)
 3. Create `NGTCP2Client.swift` replacing `QuicClientStub`
 4. Implement UDP with `NWConnection`
 5. TLS 1.3 handshake
 
 **Android:**
-1. Build ngtcp2 with Android NDK (CMake)
+1. Build ngtcp2/nghttp3 with Android NDK (CMake)
 2. Create JNI wrapper (`quic/ngtcp2_jni.c`)
 3. Create `NGTCP2Client.kt` replacing `QuicClientStub`
 4. Implement UDP with `DatagramSocket`
@@ -114,6 +114,7 @@
 
 **Resources:**
 - ngtcp2: https://github.com/ngtcp2/ngtcp2
+- nghttp3: https://github.com/ngtcp2/nghttp3
 - Server reference: `MQTTD/mqttd/transport_quic_ngtcp2.py`, `ngtcp2_bindings.py`
 
 ### Optional: Web MQTT over WSS

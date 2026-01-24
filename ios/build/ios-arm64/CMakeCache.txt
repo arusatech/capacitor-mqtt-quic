@@ -21,7 +21,7 @@ BUILD_TESTING:BOOL=ON
 CMAKE_ADDR2LINE:FILEPATH=CMAKE_ADDR2LINE-NOTFOUND
 
 //Path to a program.
-CMAKE_AR:FILEPATH=/usr/bin/ar
+CMAKE_AR:FILEPATH=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ar
 
 //Choose the type of build, options are: None Debug Release RelWithDebInfo
 // MinSizeRel ...
@@ -31,7 +31,7 @@ CMAKE_BUILD_TYPE:STRING=Release
 CMAKE_COLOR_MAKEFILE:BOOL=ON
 
 //C compiler
-CMAKE_C_COMPILER:FILEPATH=/usr/bin/cc
+CMAKE_C_COMPILER:FILEPATH=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
 
 //Flags used by the C compiler during all build types.
 CMAKE_C_FLAGS:STRING=
@@ -127,7 +127,7 @@ CMAKE_INSTALL_SHAREDSTATEDIR:PATH=com
 CMAKE_INSTALL_SYSCONFDIR:PATH=etc
 
 //Path to a program.
-CMAKE_LINKER:FILEPATH=/usr/bin/ld
+CMAKE_LINKER:FILEPATH=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld
 
 //Path to a program.
 CMAKE_MAKE_PROGRAM:FILEPATH=/usr/bin/make
@@ -153,13 +153,13 @@ CMAKE_MODULE_LINKER_FLAGS_RELEASE:STRING=
 CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO:STRING=
 
 //Path to a program.
-CMAKE_NM:FILEPATH=/usr/bin/nm
+CMAKE_NM:FILEPATH=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/nm
 
 //Path to a program.
 CMAKE_OBJCOPY:FILEPATH=CMAKE_OBJCOPY-NOTFOUND
 
 //Path to a program.
-CMAKE_OBJDUMP:FILEPATH=/usr/bin/objdump
+CMAKE_OBJDUMP:FILEPATH=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/objdump
 
 //Build architectures for OSX
 CMAKE_OSX_ARCHITECTURES:STRING=arm64
@@ -202,7 +202,7 @@ CMAKE_PROJECT_VERSION_PATCH:STATIC=90
 CMAKE_PROJECT_VERSION_TWEAK:STATIC=
 
 //Path to a program.
-CMAKE_RANLIB:FILEPATH=/usr/bin/ranlib
+CMAKE_RANLIB:FILEPATH=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib
 
 //Path to a program.
 CMAKE_READELF:FILEPATH=CMAKE_READELF-NOTFOUND
@@ -255,7 +255,7 @@ CMAKE_STATIC_LINKER_FLAGS_RELEASE:STRING=
 CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO:STRING=
 
 //Path to a program.
-CMAKE_STRIP:FILEPATH=/usr/bin/strip
+CMAKE_STRIP:FILEPATH=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/strip
 
 //No help, variable specified on the command line.
 CMAKE_SYSTEM_NAME:UNINITIALIZED=iOS
@@ -278,6 +278,9 @@ ENABLE_BORINGSSL:BOOL=OFF
 //Turn on debug output
 ENABLE_DEBUG:BOOL=OFF
 
+//No help, variable specified on the command line.
+ENABLE_EXAMPLES:UNINITIALIZED=OFF
+
 //Enable GnuTLS crypto backend
 ENABLE_GNUTLS:BOOL=OFF
 
@@ -293,11 +296,17 @@ ENABLE_OPENSSL:BOOL=ON
 //Enable Picotls crypto backend
 ENABLE_PICOTLS:BOOL=OFF
 
+//No help, variable specified on the command line.
+ENABLE_QUICTLS:UNINITIALIZED=ON
+
 //Build as shared libraries
 ENABLE_SHARED_LIB:BOOL=ON
 
 //Build as static libraries
 ENABLE_STATIC_LIB:BOOL=ON
+
+//No help, variable specified on the command line.
+ENABLE_TESTS:UNINITIALIZED=OFF
 
 //Make compiler warnings fatal
 ENABLE_WERROR:BOOL=OFF
@@ -306,19 +315,19 @@ ENABLE_WERROR:BOOL=OFF
 ENABLE_WOLFSSL:BOOL=OFF
 
 //Path to a library.
-OPENSSL_CRYPTO_LIBRARY:FILEPATH=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/install/openssl-ios/lib/libcrypto.a
+OPENSSL_CRYPTO_LIBRARY:FILEPATH=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/install/openssl-ios/lib/libcrypto.a
 
 //Path to a file.
-OPENSSL_INCLUDE_DIR:PATH=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/install/openssl-ios/include
+OPENSSL_INCLUDE_DIR:PATH=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/install/openssl-ios/include
 
 //No help, variable specified on the command line.
-OPENSSL_LIBRARIES:UNINITIALIZED=./install/openssl-ios/lib/libssl.a;./install/openssl-ios/lib/libcrypto.a
+OPENSSL_LIBRARIES:UNINITIALIZED=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/./install/openssl-ios/lib/libssl.a;/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/./install/openssl-ios/lib/libcrypto.a
 
 //No help, variable specified on the command line.
-OPENSSL_ROOT_DIR:UNINITIALIZED=./install/openssl-ios
+OPENSSL_ROOT_DIR:UNINITIALIZED=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/./install/openssl-ios
 
 //Path to a library.
-OPENSSL_SSL_LIBRARY:FILEPATH=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/install/openssl-ios/lib/libssl.a
+OPENSSL_SSL_LIBRARY:FILEPATH=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/install/openssl-ios/lib/libssl.a
 
 //Arguments to supply to pkg-config
 PKG_CONFIG_ARGN:STRING=
@@ -333,7 +342,7 @@ ngtcp2_BINARY_DIR:STATIC=/Users/annadata/Project_A/annadata-production/ref-code/
 ngtcp2_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
-ngtcp2_SOURCE_DIR:STATIC=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ngtcp2
+ngtcp2_SOURCE_DIR:STATIC=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2
 
 //Path to a library.
 pkgcfg_lib__OPENSSL_crypto:FILEPATH=pkgcfg_lib__OPENSSL_crypto-NOTFOUND
@@ -408,7 +417,7 @@ CMAKE_GENERATOR_PLATFORM:INTERNAL=
 CMAKE_GENERATOR_TOOLSET:INTERNAL=
 //Source directory with the top level CMakeLists.txt file for this
 // project
-CMAKE_HOME_DIRECTORY:INTERNAL=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ngtcp2
+CMAKE_HOME_DIRECTORY:INTERNAL=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2
 //ADVANCED property for variable: CMAKE_INSTALL_BINDIR
 CMAKE_INSTALL_BINDIR-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_INSTALL_DATADIR
@@ -462,7 +471,7 @@ CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_NM
 CMAKE_NM-ADVANCED:INTERNAL=1
 //number of local generators
-CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=1
+CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=8
 //ADVANCED property for variable: CMAKE_OBJCOPY
 CMAKE_OBJCOPY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJDUMP
@@ -508,11 +517,47 @@ CMAKE_UNAME:INTERNAL=/usr/bin/uname
 //ADVANCED property for variable: CMAKE_VERBOSE_MAKEFILE
 CMAKE_VERBOSE_MAKEFILE-ADVANCED:INTERNAL=1
 //Details about finding OpenSSL
-FIND_PACKAGE_MESSAGE_DETAILS_OpenSSL:INTERNAL=[/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/install/openssl-ios/lib/libcrypto.a][/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/install/openssl-ios/include][ ][v(1.1.1)]
+FIND_PACKAGE_MESSAGE_DETAILS_OpenSSL:INTERNAL=[/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/install/openssl-ios/lib/libcrypto.a][/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/install/openssl-ios/include][ ][v3.1.7(1.1.1)]
+//Have include arpa/inet.h
+HAVE_ARPA_INET_H:INTERNAL=1
+//Have include asm/types.h
+HAVE_ASM_TYPES_H:INTERNAL=
+//Have include byteswap.h
+HAVE_BYTESWAP_H:INTERNAL=
+//Have symbol be64toh
+HAVE_DECL_BE64TOH:INTERNAL=
+//Have symbol bswap_64
+HAVE_DECL_BSWAP_64:INTERNAL=
+//Have include endian.h
+HAVE_ENDIAN_H:INTERNAL=1
+//Have symbol explicit_bzero
+HAVE_EXPLICIT_BZERO:INTERNAL=
+//Have symbol LIBRESSL_VERSION_NUMBER
+HAVE_LIBRESSL_VERSION_NUMBER:INTERNAL=
+//Have include linux/netlink.h
+HAVE_LINUX_NETLINK_H:INTERNAL=
+//Have include linux/rtnetlink.h
+HAVE_LINUX_RTNETLINK_H:INTERNAL=
+//Have symbol memset_s
+HAVE_MEMSET_S:INTERNAL=1
+//Have include netinet/in.h
+HAVE_NETINET_IN_H:INTERNAL=1
+//Have include netinet/ip.h
+HAVE_NETINET_IP_H:INTERNAL=1
+//Result of TRY_COMPILE
+HAVE_SIZEOF_SSIZE_T:INTERNAL=TRUE
 //Have symbol SSL_provide_quic_data
-HAVE_SSL_PROVIDE_QUIC_DATA:INTERNAL=
-//Have symbol SSL_set_quic_tls_cbs
-HAVE_SSL_SET_QUIC_TLS_CBS:INTERNAL=
+HAVE_SSL_PROVIDE_QUIC_DATA:INTERNAL=1
+//Have include stddef.h
+HAVE_STDDEF_H:INTERNAL=1
+//Have include stdint.h
+HAVE_STDINT_H:INTERNAL=1
+//Have include sys/endian.h
+HAVE_SYS_ENDIAN_H:INTERNAL=1
+//Have include sys/types.h
+HAVE_SYS_TYPES_H:INTERNAL=1
+//Have include unistd.h
+HAVE_UNISTD_H:INTERNAL=1
 //ADVANCED property for variable: OPENSSL_CRYPTO_LIBRARY
 OPENSSL_CRYPTO_LIBRARY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: OPENSSL_INCLUDE_DIR
@@ -523,6 +568,8 @@ OPENSSL_SSL_LIBRARY-ADVANCED:INTERNAL=1
 PKG_CONFIG_ARGN-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: PKG_CONFIG_EXECUTABLE
 PKG_CONFIG_EXECUTABLE-ADVANCED:INTERNAL=1
+//CHECK_TYPE_SIZE: sizeof(ssize_t)
+SIZEOF_SSIZE_T:INTERNAL=8
 //CMAKE_INSTALL_PREFIX during last run
 _GNUInstallDirs_LAST_CMAKE_INSTALL_PREFIX:INTERNAL=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/install
 _OPENSSL_CFLAGS:INTERNAL=-I/opt/homebrew/Cellar/openssl@3/3.6.0/include

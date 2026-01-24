@@ -1,7 +1,7 @@
 package ai.annadata.mqttquic.quic
 
-import java.net.DatagramSocket
-import java.net.InetSocketAddress
+import android.util.Log
+import kotlinx.coroutines.delay
 
 /**
  * ngtcp2-based QUIC client implementation for Android.
@@ -9,6 +9,7 @@ import java.net.InetSocketAddress
  *
  * Build Requirements:
  * - ngtcp2 native library (libngtcp2_client.so)
+ * - nghttp3 static library (libnghttp3.a)
  * - OpenSSL 3.0+ or BoringSSL for TLS 1.3
  * - Android NDK r25+
  * - Android API 21+ (Android 5.0+)
@@ -16,10 +17,25 @@ import java.net.InetSocketAddress
 class NGTCP2Client : QuicClient {
     
     companion object {
+        private const val TAG = "NGTCP2Client"
+        private var nativeAvailable: Boolean = false
+
         init {
-            // Load native library
-            System.loadLibrary("ngtcp2_client")
+            nativeAvailable = try {
+                System.loadLibrary("ngtcp2_client")
+                true
+            } catch (e: UnsatisfiedLinkError) {
+                false
+            } catch (e: Exception) {
+                false
+            }
+
+            if (!nativeAvailable) {
+                Log.w(TAG, "ngtcp2_client native library not available")
+            }
         }
+
+        fun isAvailable(): Boolean = nativeAvailable
     }
     
     // Native methods (implemented in ngtcp2_jni.cpp)
@@ -30,14 +46,18 @@ class NGTCP2Client : QuicClient {
     private external fun nativeReadStream(connHandle: Long, streamId: Long): ByteArray?
     private external fun nativeClose(connHandle: Long)
     private external fun nativeIsConnected(connHandle: Long): Boolean
+    internal external fun nativeCloseStream(connHandle: Long, streamId: Long): Int
+    internal external fun nativeGetLastError(connHandle: Long): String
     
     // Connection state
     private var connHandle: Long = 0
     private var isConnected: Boolean = false
-    private val udpSocket = DatagramSocket()
     private val streams = mutableMapOf<Long, NGTCP2Stream>()
     
     override suspend fun connect(host: String, port: Int) {
+        if (!isAvailable()) {
+            throw IllegalStateException("ngtcp2 native library is not loaded")
+        }
         if (isConnected) {
             throw IllegalStateException("Already connected")
         }
@@ -51,16 +71,8 @@ class NGTCP2Client : QuicClient {
         // Connect to server
         val result = nativeConnect(connHandle)
         if (result != 0) {
-            throw Exception("QUIC connection failed with error code: $result")
+            throw Exception("QUIC connection failed: ${nativeGetLastError(connHandle)}")
         }
-        
-        // Bind UDP socket
-        udpSocket.bind(InetSocketAddress(0))
-        
-        // Start UDP receive loop (in background)
-        // TODO: Implement UDP packet receive loop
-        // This will call native methods to process incoming QUIC packets
-        
         isConnected = true
     }
     
@@ -71,7 +83,7 @@ class NGTCP2Client : QuicClient {
         
         val streamId = nativeOpenStream(connHandle)
         if (streamId == 0L) {
-            throw IllegalStateException("Failed to open QUIC stream")
+            throw IllegalStateException("Failed to open QUIC stream: ${nativeGetLastError(connHandle)}")
         }
         
         val stream = NGTCP2Stream(connHandle, streamId, this)
@@ -98,9 +110,6 @@ class NGTCP2Client : QuicClient {
         // Close native connection
         nativeClose(connHandle)
         connHandle = 0
-        
-        // Close UDP socket
-        udpSocket.close()
         
         isConnected = false
     }
@@ -141,10 +150,15 @@ internal class NGTCP2Stream(
         if (isClosed) {
             throw IllegalStateException("Stream is closed")
         }
-        
-        // Read data from native stream
-        val data = client.readStreamData(streamId)
-        return data ?: ByteArray(0)
+
+        while (!isClosed) {
+            val data = client.readStreamData(streamId)
+            if (data != null && data.isNotEmpty()) {
+                return data
+            }
+            delay(5)
+        }
+        return ByteArray(0)
     }
     
     override suspend fun write(data: ByteArray) {
@@ -155,7 +169,7 @@ internal class NGTCP2Stream(
         // Write data to native stream
         val result = client.writeStreamData(streamId, data)
         if (result != 0) {
-            throw Exception("Failed to write to stream: $result")
+            throw Exception("Failed to write to stream: ${client.nativeGetLastError(connHandle)}")
         }
     }
     
@@ -163,10 +177,8 @@ internal class NGTCP2Stream(
         if (isClosed) {
             return
         }
-        
-        // TODO: Close stream using native method
-        // This requires adding nativeCloseStream to JNI
-        
+
+        client.nativeCloseStream(connHandle, streamId)
         isClosed = true
     }
 }

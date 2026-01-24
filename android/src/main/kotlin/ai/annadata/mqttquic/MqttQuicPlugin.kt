@@ -7,10 +7,13 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import android.system.Os
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.nio.charset.StandardCharsets
+import java.io.File
+import java.io.IOException
 
 /**
  * Capacitor plugin bridge. Phase 3: connect/publish/subscribe call into MQTTClient.
@@ -20,6 +23,21 @@ class MqttQuicPlugin : Plugin() {
 
     private var client = MQTTClient(MQTTClient.ProtocolVersion.AUTO)
     private val scope = CoroutineScope(Dispatchers.Main)
+
+    private fun bundledCaFilePath(): String? {
+        return try {
+            val assetName = "mqttquic_ca.pem"
+            val content = context.assets.open(assetName).bufferedReader().use { it.readText() }
+            if (!content.contains("BEGIN CERTIFICATE")) {
+                return null
+            }
+            val outFile = File(context.filesDir, assetName)
+            outFile.writeText(content)
+            outFile.absolutePath
+        } catch (_: IOException) {
+            null
+        }
+    }
 
     @PluginMethod
     fun connect(call: PluginCall) {
@@ -32,6 +50,8 @@ class MqttQuicPlugin : Plugin() {
         val keepalive = call.getInt("keepalive", 60)
         val protocolVersionStr = call.getString("protocolVersion") ?: "auto"
         val sessionExpiryInterval = call.getInt("sessionExpiryInterval")
+        val caFile = call.getString("caFile")
+        val caPath = call.getString("caPath")
         
         val protocolVersion = when (protocolVersionStr) {
             "5.0" -> MQTTClient.ProtocolVersion.V5
@@ -46,6 +66,21 @@ class MqttQuicPlugin : Plugin() {
 
         scope.launch {
             try {
+                try {
+                    val bundled = bundledCaFilePath()
+                    when {
+                        caFile != null -> Os.setenv("MQTT_QUIC_CA_FILE", caFile, true)
+                        bundled != null -> Os.setenv("MQTT_QUIC_CA_FILE", bundled, true)
+                        else -> Os.setenv("MQTT_QUIC_CA_FILE", "", true)
+                    }
+                    if (caPath != null) {
+                        Os.setenv("MQTT_QUIC_CA_PATH", caPath, true)
+                    } else {
+                        Os.setenv("MQTT_QUIC_CA_PATH", "", true)
+                    }
+                } catch (_: Exception) {
+                    // Ignore env setup failures; native layer will report verification errors.
+                }
                 if (client.getState() == MQTTClient.State.CONNECTED) {
                     client.disconnect()
                 }
@@ -54,6 +89,51 @@ class MqttQuicPlugin : Plugin() {
                 call.resolve(JSObject().put("connected", true))
             } catch (e: Exception) {
                 call.reject(e.message ?: "Connection failed")
+            }
+        }
+    }
+
+    @PluginMethod
+    fun testHarness(call: PluginCall) {
+        val host = call.getString("host") ?: ""
+        val port = call.getInt("port") ?: 1884
+        val clientId = call.getString("clientId") ?: "mqttquic_test_client"
+        val topic = call.getString("topic") ?: "test/topic"
+        val payload = call.getString("payload") ?: "Hello QUIC!"
+        val caFile = call.getString("caFile")
+        val caPath = call.getString("caPath")
+
+        if (host.isEmpty()) {
+            call.reject("host is required")
+            return
+        }
+
+        scope.launch {
+            try {
+                try {
+                    val bundled = bundledCaFilePath()
+                    when {
+                        caFile != null -> Os.setenv("MQTT_QUIC_CA_FILE", caFile, true)
+                        bundled != null -> Os.setenv("MQTT_QUIC_CA_FILE", bundled, true)
+                        else -> Os.setenv("MQTT_QUIC_CA_FILE", "", true)
+                    }
+                    if (caPath != null) {
+                        Os.setenv("MQTT_QUIC_CA_PATH", caPath, true)
+                    } else {
+                        Os.setenv("MQTT_QUIC_CA_PATH", "", true)
+                    }
+                } catch (_: Exception) {
+                    // Ignore env setup failures; native layer will report verification errors.
+                }
+
+                client = MQTTClient(MQTTClient.ProtocolVersion.AUTO)
+                client.connect(host, port, clientId, null, null, true, 60, null)
+                client.subscribe(topic, 0, null)
+                client.publish(topic, payload.toByteArray(StandardCharsets.UTF_8), 0, null)
+                client.disconnect()
+                call.resolve(JSObject().put("success", true))
+            } catch (e: Exception) {
+                call.reject(e.message ?: "Test harness failed")
             }
         }
     }

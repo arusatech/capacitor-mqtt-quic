@@ -61,6 +61,88 @@ await MqttQuic.unsubscribe({ topic: 'sensors/+' });
 await MqttQuic.disconnect();
 ```
 
+### TLS Certificate Verification (QUIC)
+
+QUIC requires TLS 1.3 and certificate verification is **enabled by default**.
+You can bundle a CA PEM and it will be loaded automatically:
+
+- iOS: `ios/Sources/MqttQuicPlugin/Resources/mqttquic_ca.pem`
+- Android: `android/src/main/assets/mqttquic_ca.pem`
+
+You can also override per call:
+
+```ts
+await MqttQuic.connect({
+  host: 'mqtt.example.com',
+  port: 1884,
+  clientId: 'my-client-id',
+  caFile: '/path/to/ca-bundle.pem',
+  // or caPath: '/path/to/ca-directory'
+});
+```
+
+#### How to generate certificates
+
+**Option A: Public CA (Let’s Encrypt)**
+You do not bundle `mqttquic_ca.pem` (the OS already trusts public CAs).
+
+```bash
+sudo apt-get update
+sudo apt-get install -y certbot
+sudo certbot certonly --standalone -d mqtt.example.com
+```
+
+Use on server:
+- Cert: `/etc/letsencrypt/live/mqtt.example.com/fullchain.pem`
+- Key: `/etc/letsencrypt/live/mqtt.example.com/privkey.pem`
+
+**Option B: Private CA (dev/internal)**
+Generate your own CA, sign the server cert, and bundle the CA PEM.
+
+```bash
+mkdir -p certs && cd certs
+
+# 1) Create CA (one-time)
+openssl genrsa -out ca.key 4096
+openssl req -x509 -new -nodes -key ca.key -sha256 -days 3650 -out ca.pem \
+  -subj "/C=US/ST=CA/L=SF/O=Annadata/OU=MQTT/CN=Annadata-Root-CA"
+
+# 2) Create server key + CSR
+openssl genrsa -out server.key 2048
+openssl req -new -key server.key -out server.csr \
+  -subj "/C=US/ST=CA/L=SF/O=Annadata/OU=MQTT/CN=mqtt.example.com"
+
+# 3) Add SANs (edit DNS/IP)
+cat > server_ext.cnf <<EOF
+subjectAltName = DNS:mqtt.example.com,IP:YOUR.SERVER.IP
+extendedKeyUsage = serverAuth
+EOF
+
+# 4) Sign server cert
+openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial \
+  -out server.pem -days 365 -sha256 -extfile server_ext.cnf
+```
+
+Bundle the CA cert (never ship `ca.key`):
+- iOS: `ios/Sources/MqttQuicPlugin/Resources/mqttquic_ca.pem` (use `ca.pem`)
+- Android: `android/src/main/assets/mqttquic_ca.pem` (use `ca.pem`)
+
+### Test Harness (QUIC Smoke Test)
+
+This runs: connect → subscribe → publish → disconnect.
+
+```ts
+await MqttQuic.testHarness({
+  host: 'mqtt.example.com',
+  port: 1884,
+  clientId: 'mqttquic_test_client',
+  topic: 'test/topic',
+  payload: 'Hello QUIC!',
+  // optional CA override
+  caFile: '/path/to/ca-bundle.pem'
+});
+```
+
 ### MQTT 5.0 Features
 
 #### Protocol Version Selection
@@ -175,6 +257,8 @@ interface MqttQuicConnectOptions {
   password?: string;
   cleanSession?: boolean;
   keepalive?: number;
+  caFile?: string;
+  caPath?: string;
   // MQTT 5.0 options
   protocolVersion?: '3.1.1' | '5.0' | 'auto';
   sessionExpiryInterval?: number;
@@ -201,6 +285,16 @@ interface MqttQuicSubscribeOptions {
   qos?: 0 | 1 | 2;
   // MQTT 5.0
   subscriptionIdentifier?: number;
+}
+
+interface MqttQuicTestHarnessOptions {
+  host: string;
+  port?: number;
+  clientId?: string;
+  topic?: string;
+  payload?: string;
+  caFile?: string;
+  caPath?: string;
 }
 ```
 

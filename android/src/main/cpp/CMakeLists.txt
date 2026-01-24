@@ -11,22 +11,92 @@ if(NOT ANDROID_PLATFORM)
     set(ANDROID_PLATFORM android-21)
 endif()
 
+# Default OpenSSL path (can be overridden via -DOPENSSL_ROOT_DIR=...)
+if(NOT OPENSSL_ROOT_DIR)
+    set(OPENSSL_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../install/openssl-android" CACHE PATH "Path to OpenSSL for Android")
+    # ABI-aware layout: allow installs under .../openssl-android/<abi>
+    if(EXISTS "${OPENSSL_ROOT_DIR}/${ANDROID_ABI}")
+        set(OPENSSL_ROOT_DIR "${OPENSSL_ROOT_DIR}/${ANDROID_ABI}" CACHE PATH "Path to OpenSSL for Android (ABI)" FORCE)
+    endif()
+endif()
+
+# Help FindOpenSSL by pointing at explicit locations when present
+if(NOT OPENSSL_INCLUDE_DIR AND EXISTS "${OPENSSL_ROOT_DIR}/include")
+    set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include")
+endif()
+if(NOT OPENSSL_CRYPTO_LIBRARY AND EXISTS "${OPENSSL_ROOT_DIR}/lib/libcrypto.a")
+    set(OPENSSL_CRYPTO_LIBRARY "${OPENSSL_ROOT_DIR}/lib/libcrypto.a")
+endif()
+if(NOT OPENSSL_SSL_LIBRARY AND EXISTS "${OPENSSL_ROOT_DIR}/lib/libssl.a")
+    set(OPENSSL_SSL_LIBRARY "${OPENSSL_ROOT_DIR}/lib/libssl.a")
+endif()
+
 # Find required packages
 find_package(OpenSSL REQUIRED)
 
-# ngtcp2 source directory (adjust path as needed)
+# ngtcp2 install/source directories (adjust as needed)
+if(NOT NGTCP2_INSTALL_DIR)
+    set(NGTCP2_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../build/android-${ANDROID_ABI}/install" CACHE PATH "Path to ngtcp2 install")
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../install/ngtcp2-android/${ANDROID_ABI}")
+        set(NGTCP2_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../install/ngtcp2-android/${ANDROID_ABI}" CACHE PATH "Path to ngtcp2 install (ABI)" FORCE)
+    endif()
+endif()
 set(NGTCP2_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../ngtcp2" CACHE PATH "Path to ngtcp2 source")
 
-# Check if ngtcp2 source exists
-if(NOT EXISTS "${NGTCP2_SOURCE_DIR}/lib/ngtcp2.h")
-    message(WARNING "ngtcp2 source not found at ${NGTCP2_SOURCE_DIR}")
-    message(WARNING "Please set NGTCP2_SOURCE_DIR or clone ngtcp2:")
-    message(WARNING "  git clone https://github.com/ngtcp2/ngtcp2.git")
+# nghttp3 install/source directories (adjust as needed)
+if(NOT NGHTTP3_INSTALL_DIR)
+    set(NGHTTP3_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../build/nghttp3-android-${ANDROID_ABI}/install" CACHE PATH "Path to nghttp3 install")
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../install/nghttp3-android/${ANDROID_ABI}")
+        set(NGHTTP3_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../install/nghttp3-android/${ANDROID_ABI}" CACHE PATH "Path to nghttp3 install (ABI)" FORCE)
+    endif()
+endif()
+set(NGHTTP3_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../nghttp3" CACHE PATH "Path to nghttp3 source")
+
+# Prefer installed libraries, fallback to source build
+set(NGTCP2_INCLUDE_DIR "")
+set(NGTCP2_LIBRARY "")
+set(NGTCP2_CRYPTO_LIBRARY "")
+if(EXISTS "${NGTCP2_INSTALL_DIR}/include/ngtcp2/ngtcp2.h")
+    set(NGTCP2_INCLUDE_DIR "${NGTCP2_INSTALL_DIR}/include")
+    if(EXISTS "${NGTCP2_INSTALL_DIR}/lib/libngtcp2.a")
+        set(NGTCP2_LIBRARY "${NGTCP2_INSTALL_DIR}/lib/libngtcp2.a")
+    elseif(EXISTS "${NGTCP2_INSTALL_DIR}/lib/libngtcp2.so")
+        set(NGTCP2_LIBRARY "${NGTCP2_INSTALL_DIR}/lib/libngtcp2.so")
+    endif()
+    if(EXISTS "${NGTCP2_INSTALL_DIR}/lib/libngtcp2_crypto_quictls.a")
+        set(NGTCP2_CRYPTO_LIBRARY "${NGTCP2_INSTALL_DIR}/lib/libngtcp2_crypto_quictls.a")
+    elseif(EXISTS "${NGTCP2_INSTALL_DIR}/lib/libngtcp2_crypto_quictls.so")
+        set(NGTCP2_CRYPTO_LIBRARY "${NGTCP2_INSTALL_DIR}/lib/libngtcp2_crypto_quictls.so")
+    endif()
+else()
+    if(NOT EXISTS "${NGTCP2_SOURCE_DIR}/lib/includes/ngtcp2/ngtcp2.h" AND NOT EXISTS "${NGTCP2_SOURCE_DIR}/lib/ngtcp2.h")
+        message(WARNING "ngtcp2 source not found at ${NGTCP2_SOURCE_DIR}")
+        message(WARNING "Please set NGTCP2_SOURCE_DIR or clone ngtcp2:")
+        message(WARNING "  git clone https://github.com/ngtcp2/ngtcp2.git")
+    endif()
+    if(EXISTS "${NGTCP2_SOURCE_DIR}/CMakeLists.txt")
+        add_subdirectory(${NGTCP2_SOURCE_DIR} ngtcp2_lib)
+    endif()
 endif()
 
-# Add ngtcp2 as subdirectory (if available)
-if(EXISTS "${NGTCP2_SOURCE_DIR}/CMakeLists.txt")
-    add_subdirectory(${NGTCP2_SOURCE_DIR} ngtcp2_lib)
+set(NGHTTP3_INCLUDE_DIR "")
+set(NGHTTP3_LIBRARY "")
+if(EXISTS "${NGHTTP3_INSTALL_DIR}/include/nghttp3/nghttp3.h")
+    set(NGHTTP3_INCLUDE_DIR "${NGHTTP3_INSTALL_DIR}/include")
+    if(EXISTS "${NGHTTP3_INSTALL_DIR}/lib/libnghttp3.a")
+        set(NGHTTP3_LIBRARY "${NGHTTP3_INSTALL_DIR}/lib/libnghttp3.a")
+    elseif(EXISTS "${NGHTTP3_INSTALL_DIR}/lib/libnghttp3.so")
+        set(NGHTTP3_LIBRARY "${NGHTTP3_INSTALL_DIR}/lib/libnghttp3.so")
+    endif()
+else()
+    if(NOT EXISTS "${NGHTTP3_SOURCE_DIR}/lib/includes/nghttp3/nghttp3.h" AND NOT EXISTS "${NGHTTP3_SOURCE_DIR}/lib/nghttp3.h")
+        message(WARNING "nghttp3 source not found at ${NGHTTP3_SOURCE_DIR}")
+        message(WARNING "Please set NGHTTP3_SOURCE_DIR or clone nghttp3:")
+        message(WARNING "  git clone https://github.com/ngtcp2/nghttp3.git")
+    endif()
+    if(EXISTS "${NGHTTP3_SOURCE_DIR}/CMakeLists.txt")
+        add_subdirectory(${NGHTTP3_SOURCE_DIR} nghttp3_lib)
+    endif()
 endif()
 
 # JNI source files
@@ -40,19 +110,36 @@ add_library(ngtcp2_client SHARED ${JNI_SOURCES})
 # Include directories
 target_include_directories(ngtcp2_client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${NGTCP2_INCLUDE_DIR}
+    ${NGHTTP3_INCLUDE_DIR}
     ${NGTCP2_SOURCE_DIR}/lib/includes
+    ${NGHTTP3_SOURCE_DIR}/lib/includes
     ${OpenSSL_INCLUDE_DIR}
 )
 
 # Link libraries
 target_link_libraries(ngtcp2_client
-    # ngtcp2 library (when built)
-    # ngtcp2
     # OpenSSL
     ${OpenSSL_LIBRARIES}
     # Android log
     log
 )
+
+if(TARGET ngtcp2)
+    target_link_libraries(ngtcp2_client PRIVATE ngtcp2)
+elseif(NGTCP2_LIBRARY)
+    target_link_libraries(ngtcp2_client PRIVATE ${NGTCP2_LIBRARY})
+endif()
+
+if(TARGET nghttp3)
+    target_link_libraries(ngtcp2_client PRIVATE nghttp3)
+elseif(NGHTTP3_LIBRARY)
+    target_link_libraries(ngtcp2_client PRIVATE ${NGHTTP3_LIBRARY})
+endif()
+
+if(NGTCP2_CRYPTO_LIBRARY)
+    target_link_libraries(ngtcp2_client PRIVATE ${NGTCP2_CRYPTO_LIBRARY})
+endif()
 
 # Compiler flags
 target_compile_options(ngtcp2_client PRIVATE

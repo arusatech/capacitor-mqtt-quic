@@ -4,7 +4,7 @@ This document tracks the implementation progress of ngtcp2 integration for the C
 
 ## Overview
 
-The ngtcp2 integration replaces the stub QUIC implementations (`QuicClientStub`) with real QUIC transport using the ngtcp2 library. This enables actual MQTT-over-QUIC connections on iOS and Android.
+The ngtcp2 integration replaces the stub QUIC implementations (`QuicClientStub`) with real QUIC transport using the ngtcp2 library. nghttp3 is included alongside ngtcp2 for HTTP/3 support and shared QUIC tooling. This enables actual MQTT-over-QUIC connections on iOS and Android.
 
 ## Implementation Status
 
@@ -15,12 +15,14 @@ The ngtcp2 integration replaces the stub QUIC implementations (`QuicClientStub`)
 **Completed:**
 - ✅ `NGTCP2Client.swift` - Swift wrapper implementing `QuicClientProtocol`
 - ✅ Build scripts (`build-ngtcp2.sh`, `build-openssl.sh`)
+- ✅ Build script (`build-nghttp3.sh`)
 - ✅ Build documentation (`NGTCP2_BUILD_INSTRUCTIONS.md`)
 - ✅ Error handling and connection state management
 - ✅ Stream management infrastructure
 
 **Remaining:**
 - ⏳ Build ngtcp2 static library for iOS
+- ⏳ Build nghttp3 static library for iOS
 - ⏳ Build OpenSSL for iOS (or use pre-built)
 - ⏳ Implement ngtcp2 C API calls in `NGTCP2Client.swift`
 - ⏳ Implement TLS 1.3 handshake
@@ -42,10 +44,12 @@ The ngtcp2 integration replaces the stub QUIC implementations (`QuicClientStub`)
 - ✅ `ngtcp2_jni.cpp` - JNI bridge between Kotlin and ngtcp2
 - ✅ `CMakeLists.txt` - Build configuration for native library
 - ✅ Build scripts (`build-ngtcp2.sh`, `build-openssl.sh`)
+- ✅ Build script (`build-nghttp3.sh`)
 - ✅ Build documentation (`NGTCP2_BUILD_INSTRUCTIONS.md`)
 
 **Remaining:**
 - ⏳ Build ngtcp2 native library for Android
+- ⏳ Build nghttp3 static library for Android
 - ⏳ Build OpenSSL for Android (or use pre-built)
 - ⏳ Implement ngtcp2 C API calls in `ngtcp2_jni.cpp`
 - ⏳ Implement TLS 1.3 handshake
@@ -60,13 +64,13 @@ The ngtcp2 integration replaces the stub QUIC implementations (`QuicClientStub`)
 - `android/build-openssl.sh`
 - `android/NGTCP2_BUILD_INSTRUCTIONS.md`
 
-### Phase 3: Replace Stubs ⏳ Pending
+### Phase 3: Replace Stubs ✅ Completed (library-gated)
 
-**Status:** Not started - waiting for Phase 1 and 2 completion
+**Status:** NGTCP2 client is now preferred when native libraries are available, with stub fallback for development
 
 **Tasks:**
-- Replace `QuicClientStub` with `NGTCP2Client` in `MQTTClient.swift` (iOS)
-- Replace `QuicClientStub` with `NGTCP2Client` in `MQTTClient.kt` (Android)
+- ✅ Replace `QuicClientStub` with `NGTCP2Client` in `MQTTClient.swift` (iOS)
+- ✅ Replace `QuicClientStub` with `NGTCP2Client` in `MQTTClient.kt` (Android)
 - Update error handling for real network errors
 - Test connection establishment
 

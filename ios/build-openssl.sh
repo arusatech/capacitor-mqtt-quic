@@ -8,16 +8,43 @@
 # - iOS SDK 15.0+
 #
 # Usage:
-#   ./build-openssl.sh [--arch ARCH] [--sdk SDK] [--version VERSION]
+#   ./build-openssl.sh [--arch ARCH] [--sdk SDK] [--version VERSION] [--quictls] [--quictls-branch BRANCH]
 #
 # Example:
-#   ./build-openssl.sh --arch arm64 --sdk iphoneos --version 3.2.0
+#   ./build-openssl.sh --arch arm64 --sdk iphoneos --version 3.2.0 --quictls
 #
 
 set -e
 
 # Default values
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -z "$PROJECT_DIR" ] && [ -f "$SCRIPT_DIR/../package.json" ]; then
+    PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+fi
+if [ -n "$PROJECT_DIR" ]; then
+    REF_CODE_DIR="$(cd "$PROJECT_DIR/ref-code" && pwd)"
+else
+    if [ -d "$SCRIPT_DIR/../ref-code" ]; then
+        REF_CODE_DIR="$(cd "$SCRIPT_DIR/../ref-code" && pwd)"
+    else
+        REF_CODE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+    fi
+fi
+DEFAULT_OPENSSL_SOURCE_DIR=""
+if [ -n "$PROJECT_DIR" ] && [ -d "$PROJECT_DIR/ref-code/openssl" ]; then
+    DEFAULT_OPENSSL_SOURCE_DIR="$(cd "$PROJECT_DIR/ref-code/openssl" && pwd)"
+elif [ -n "$PROJECT_DIR" ] && [ -d "$PROJECT_DIR/ref-code.openssl" ]; then
+    DEFAULT_OPENSSL_SOURCE_DIR="$(cd "$PROJECT_DIR/ref-code.openssl" && pwd)"
+elif [ -d "$SCRIPT_DIR/../ref-code/openssl" ]; then
+    DEFAULT_OPENSSL_SOURCE_DIR="$(cd "$SCRIPT_DIR/../ref-code/openssl" && pwd)"
+elif [ -d "$SCRIPT_DIR/../ref-code.openssl" ]; then
+    DEFAULT_OPENSSL_SOURCE_DIR="$(cd "$SCRIPT_DIR/../ref-code.openssl" && pwd)"
+else
+    DEFAULT_OPENSSL_SOURCE_DIR="$REF_CODE_DIR/openssl"
+fi
 OPENSSL_VERSION="${OPENSSL_VERSION:-3.2.0}"
+USE_QUICTLS="${USE_QUICTLS:-0}"
+QUICTLS_BRANCH="${QUICTLS_BRANCH:-openssl-3.1.7+quic}"
 ARCH="${ARCH:-arm64}"
 SDK="${SDK:-iphoneos}"
 IOS_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET:-15.0}"
@@ -38,6 +65,15 @@ while [[ $# -gt 0 ]]; do
             OPENSSL_VERSION="$2"
             shift 2
             ;;
+        --quictls)
+            USE_QUICTLS=1
+            shift
+            ;;
+        --quictls-branch)
+            QUICTLS_BRANCH="$2"
+            USE_QUICTLS=1
+            shift 2
+            ;;
         --ios-deployment-target)
             IOS_DEPLOYMENT_TARGET="$2"
             shift 2
@@ -48,7 +84,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--arch ARCH] [--sdk SDK] [--version VERSION]"
+            echo "Usage: $0 [--arch ARCH] [--sdk SDK] [--version VERSION] [--quictls] [--quictls-branch BRANCH]"
             exit 1
             ;;
     esac
@@ -67,20 +103,43 @@ if [ -z "$IOS_SDK_PATH" ]; then
     exit 1
 fi
 
-echo "Building OpenSSL $OPENSSL_VERSION for iOS"
+if [ "$USE_QUICTLS" = "1" ]; then
+    echo "Building quictls ($QUICTLS_BRANCH) for iOS"
+else
+    echo "Building OpenSSL $OPENSSL_VERSION for iOS"
+fi
 echo "  Architecture: $ARCH"
 echo "  SDK: $SDK"
 echo "  SDK Path: $IOS_SDK_PATH"
 echo "  Deployment Target: iOS $IOS_DEPLOYMENT_TARGET"
 echo "  Install Prefix: $INSTALL_PREFIX"
 
-# Check if OpenSSL source exists
-OPENSSL_SOURCE_DIR="${OPENSSL_SOURCE_DIR:-../../openssl}"
+# Check if OpenSSL/quictls source exists
+if [ "$USE_QUICTLS" = "1" ]; then
+    OPENSSL_SOURCE_DIR="${OPENSSL_SOURCE_DIR:-$DEFAULT_OPENSSL_SOURCE_DIR}"
+    OPENSSL_REPO_URL="https://github.com/quictls/openssl.git"
+    OPENSSL_REPO_BRANCH="$QUICTLS_BRANCH"
+else
+    OPENSSL_SOURCE_DIR="${OPENSSL_SOURCE_DIR:-$DEFAULT_OPENSSL_SOURCE_DIR}"
+    OPENSSL_REPO_URL="https://github.com/openssl/openssl.git"
+    OPENSSL_REPO_BRANCH="openssl-$OPENSSL_VERSION"
+fi
 if [ ! -d "$OPENSSL_SOURCE_DIR" ]; then
     echo "OpenSSL source not found. Cloning..."
-    git clone --depth 1 --branch "openssl-$OPENSSL_VERSION" \
-        https://github.com/openssl/openssl.git "$OPENSSL_SOURCE_DIR" || \
-    git clone --depth 1 https://github.com/openssl/openssl.git "$OPENSSL_SOURCE_DIR"
+    git clone --depth 1 --branch "$OPENSSL_REPO_BRANCH" \
+        "$OPENSSL_REPO_URL" "$OPENSSL_SOURCE_DIR" || \
+    git clone --depth 1 "$OPENSSL_REPO_URL" "$OPENSSL_SOURCE_DIR"
+fi
+
+# Validate quictls source when requested
+if [ "$USE_QUICTLS" = "1" ]; then
+    if ! grep -q "SSL_provide_quic_data" "$OPENSSL_SOURCE_DIR/include/openssl/ssl.h.in" 2>/dev/null; then
+        echo "Error: OPENSSL_SOURCE_DIR does not appear to be quictls."
+        echo "Please clone quictls into $OPENSSL_SOURCE_DIR or set OPENSSL_SOURCE_DIR to a quictls checkout."
+        echo "Example:"
+        echo "  git clone --depth 1 --branch $QUICTLS_BRANCH $OPENSSL_REPO_URL $OPENSSL_SOURCE_DIR"
+        exit 1
+    fi
 fi
 
 cd "$OPENSSL_SOURCE_DIR"
@@ -156,6 +215,8 @@ fi
 # Configure OpenSSL
 echo ""
 echo "Configuring OpenSSL for $PLATFORM with QUIC support..."
+# OpenSSL uses "enable-quic" (not "quic") for QUIC support.
+QUIC_OPTION="enable-quic"
 if [ "$PLATFORM" = "ios64-cross" ]; then
     # For ios64-cross, set environment variables that OpenSSL expects
     export CROSS_TOP="$(dirname "$(dirname "$IOS_SDK_PATH")")"
@@ -168,7 +229,7 @@ if [ "$PLATFORM" = "ios64-cross" ]; then
         no-shared \
         no-tests \
         no-asm \
-        quic \
+        "$QUIC_OPTION" \
         -mios-version-min="$IOS_DEPLOYMENT_TARGET"
     
     # Fix the Makefile to ensure correct sysroot is used
@@ -258,7 +319,7 @@ else
         no-shared \
         no-tests \
         no-asm \
-        quic
+        "$QUIC_OPTION"
 fi
 
 # Verify QUIC support was enabled
@@ -316,6 +377,26 @@ make -k install_sw || {
         cp -r include/openssl "$INSTALL_PREFIX/include/" 2>/dev/null || true
     fi
 }
+
+if [ "$USE_QUICTLS" = "1" ]; then
+    if ! grep -q "SSL_provide_quic_data" "$INSTALL_PREFIX/include/openssl/ssl.h" 2>/dev/null; then
+        echo "Error: Installed OpenSSL headers do not include QUIC APIs."
+        echo "Ensure OPENSSL_SOURCE_DIR points to a quictls checkout."
+        exit 1
+    fi
+fi
+
+echo ""
+echo "Syncing artifacts to ios/libs and ios/include..."
+LIBS_DIR="$SCRIPT_DIR/libs"
+INCLUDE_DIR="$SCRIPT_DIR/include"
+mkdir -p "$LIBS_DIR" "$INCLUDE_DIR"
+if [ -f "$INSTALL_PREFIX/lib/libssl.a" ] && [ -f "$INSTALL_PREFIX/lib/libcrypto.a" ]; then
+    cp "$INSTALL_PREFIX/lib/libssl.a" "$INSTALL_PREFIX/lib/libcrypto.a" "$LIBS_DIR/"
+fi
+if [ -d "$INSTALL_PREFIX/include/openssl" ]; then
+    cp -R "$INSTALL_PREFIX/include/openssl" "$INCLUDE_DIR/"
+fi
 
 echo ""
 echo "OpenSSL build complete!"

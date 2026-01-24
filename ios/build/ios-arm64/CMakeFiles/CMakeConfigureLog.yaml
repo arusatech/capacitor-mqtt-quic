@@ -210,13 +210,7 @@ events:
       CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
       CMAKE_FIND_USE_INSTALL_PREFIX: true
     names:
-      - "cc"
-      - "gcc"
-      - "cl"
-      - "bcc"
-      - "xlc"
-      - "icx"
-      - "clang"
+      - "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang"
     candidate_directories:
       - "/Users/annadata/.rbenv/shims/"
       - "/Library/Frameworks/Python.framework/Versions/3.14/bin/"
@@ -239,15 +233,7 @@ events:
       - "/Users/annadata/Library/Android/sdk/platform-tools/"
       - "/Users/annadata/Library/Android/sdk/tools/"
       - "/Users/annadata/Library/Android/sdk/tools/bin/"
-    searched_directories:
-      - "/Users/annadata/.rbenv/shims/cc"
-      - "/Library/Frameworks/Python.framework/Versions/3.14/bin/cc"
-      - "/Users/annadata/.gem/bin/cc"
-      - "/opt/homebrew/opt/openjdk@21/bin/cc"
-      - "/Users/annadata/.npm-global/bin/cc"
-      - "/usr/local/bin/cc"
-      - "/System/Cryptexes/App/usr/bin/cc"
-    found: "/usr/bin/cc"
+    found: "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang"
     search_context:
       ENV{PATH}:
         - "/Users/annadata/.rbenv/shims"
@@ -343,19 +329,94 @@ events:
       - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:122 (CMAKE_DETERMINE_COMPILER_ID)"
       - "CMakeLists.txt:31 (project)"
     message: |
-      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
-      Compiler: /usr/bin/cc 
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+      Compiler: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang 
       Build flags: 
       Id flags:  
+      
+      The output was:
+      1
+      ld: library 'System' not found
+      clang: error: linker command failed with exit code 1 (use -v to see invocation)
+      
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:462 (find_file)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:500 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:122 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:31 (project)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCCompilerId.c.in"
+    candidate_directories:
+      - "/opt/homebrew/share/cmake/Modules/"
+    found: "/opt/homebrew/share/cmake/Modules/CMakeCCompilerId.c.in"
+    search_context:
+      ENV{PATH}:
+        - "/Users/annadata/.rbenv/shims"
+        - "/Library/Frameworks/Python.framework/Versions/3.14/bin"
+        - "/Users/annadata/.gem/bin"
+        - "/opt/homebrew/opt/openjdk@21/bin"
+        - "/Users/annadata/.npm-global/bin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/opt/homebrew/bin"
+        - "/Library/Frameworks/Python.framework/Versions/3.14/bin"
+        - "/opt/homebrew/opt/openjdk@21/bin"
+        - "/Users/annadata/.npm-global/bin"
+        - "/Users/annadata/Library/Android/sdk/emulator"
+        - "/Users/annadata/Library/Android/sdk/platform-tools"
+        - "/Users/annadata/Library/Android/sdk/tools"
+        - "/Users/annadata/Library/Android/sdk/tools/bin"
+        - "/Users/annadata/Library/Android/sdk/emulator"
+        - "/Users/annadata/Library/Android/sdk/platform-tools"
+        - "/Users/annadata/Library/Android/sdk/tools"
+        - "/Users/annadata/Library/Android/sdk/tools/bin"
+      CMAKE_INSTALL_PREFIX: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/install"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:122 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:31 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang 
+      Build flags: 
+      Id flags: -c 
       
       The output was:
       0
       
       
-      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CMakeCCompilerId.o"
       
       The C compiler identification is AppleClang, found in:
-        /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/4.2.2/CompilerIdC/a.out
+        /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/4.2.2/CompilerIdC/CMakeCCompilerId.o
       
   -
     kind: "message-v1"
@@ -364,7 +425,10 @@ events:
       - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:122 (CMAKE_DETERMINE_COMPILER_ID)"
       - "CMakeLists.txt:31 (project)"
     message: |
-      Detecting C compiler apple sysroot: "/usr/bin/cc" "-E" "apple-sdk.c"
+      Detecting C compiler apple sysroot: "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" "-E" "apple-sdk.c"
+        apple-sdk.c:1:10: fatal error: 'AvailabilityMacros.h' file not found
+            1 | #include <AvailabilityMacros.h>
+              |          ^~~~~~~~~~~~~~~~~~~~~~
         # 1 "apple-sdk.c"
         # 1 "<built-in>" 1
         # 1 "<built-in>" 3
@@ -372,32 +436,10 @@ events:
         # 1 "<command line>" 1
         # 1 "<built-in>" 2
         # 1 "apple-sdk.c" 2
-        # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/AvailabilityMacros.h" 1 3 4
-        # 89 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/AvailabilityMacros.h" 3 4
-        # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/AvailabilityVersions.h" 1 3 4
-        # 90 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/AvailabilityMacros.h" 2 3 4
-        # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/TargetConditionals.h" 1 3 4
-        # 91 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/AvailabilityMacros.h" 2 3 4
-        # 207 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/AvailabilityMacros.h" 3 4
-        # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/Availability.h" 1 3 4
-        # 196 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/Availability.h" 3 4
-        # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/AvailabilityVersions.h" 1 3 4
-        # 197 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/Availability.h" 2 3 4
-        # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/AvailabilityInternal.h" 1 3 4
-        # 33 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/AvailabilityInternal.h" 3 4
-        # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/AvailabilityVersions.h" 1 3 4
-        # 34 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/AvailabilityInternal.h" 2 3 4
-        # 198 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/Availability.h" 2 3 4
-        # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/AvailabilityInternalLegacy.h" 1 3 4
-        # 34 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/AvailabilityInternalLegacy.h" 3 4
-        # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/AvailabilityInternal.h" 1 3 4
-        # 35 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/AvailabilityInternalLegacy.h" 2 3 4
-        # 199 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/Availability.h" 2 3 4
-        # 208 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/AvailabilityMacros.h" 2 3 4
-        # 2 "apple-sdk.c" 2
         
+        1 error generated.
         
-      Found apple sysroot: /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+      No apple sysroot found.
   -
     kind: "find-v1"
     backtrace:
@@ -418,7 +460,7 @@ events:
     names:
       - "ar"
     candidate_directories:
-      - "/usr/bin/"
+      - "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/"
       - "/Users/annadata/.rbenv/shims/"
       - "/Library/Frameworks/Python.framework/Versions/3.14/bin/"
       - "/Users/annadata/.gem/bin/"
@@ -426,6 +468,7 @@ events:
       - "/Users/annadata/.npm-global/bin/"
       - "/usr/local/bin/"
       - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
       - "/bin/"
       - "/usr/sbin/"
       - "/sbin/"
@@ -439,7 +482,7 @@ events:
       - "/Users/annadata/Library/Android/sdk/platform-tools/"
       - "/Users/annadata/Library/Android/sdk/tools/"
       - "/Users/annadata/Library/Android/sdk/tools/bin/"
-    found: "/usr/bin/ar"
+    found: "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ar"
     search_context:
       ENV{PATH}:
         - "/Users/annadata/.rbenv/shims"
@@ -491,7 +534,7 @@ events:
     names:
       - "ranlib"
     candidate_directories:
-      - "/usr/bin/"
+      - "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/"
       - "/Users/annadata/.rbenv/shims/"
       - "/Library/Frameworks/Python.framework/Versions/3.14/bin/"
       - "/Users/annadata/.gem/bin/"
@@ -499,6 +542,7 @@ events:
       - "/Users/annadata/.npm-global/bin/"
       - "/usr/local/bin/"
       - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
       - "/bin/"
       - "/usr/sbin/"
       - "/sbin/"
@@ -512,7 +556,7 @@ events:
       - "/Users/annadata/Library/Android/sdk/platform-tools/"
       - "/Users/annadata/Library/Android/sdk/tools/"
       - "/Users/annadata/Library/Android/sdk/tools/bin/"
-    found: "/usr/bin/ranlib"
+    found: "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib"
     search_context:
       ENV{PATH}:
         - "/Users/annadata/.rbenv/shims"
@@ -564,7 +608,7 @@ events:
     names:
       - "strip"
     candidate_directories:
-      - "/usr/bin/"
+      - "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/"
       - "/Users/annadata/.rbenv/shims/"
       - "/Library/Frameworks/Python.framework/Versions/3.14/bin/"
       - "/Users/annadata/.gem/bin/"
@@ -572,6 +616,7 @@ events:
       - "/Users/annadata/.npm-global/bin/"
       - "/usr/local/bin/"
       - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
       - "/bin/"
       - "/usr/sbin/"
       - "/sbin/"
@@ -585,7 +630,7 @@ events:
       - "/Users/annadata/Library/Android/sdk/platform-tools/"
       - "/Users/annadata/Library/Android/sdk/tools/"
       - "/Users/annadata/Library/Android/sdk/tools/bin/"
-    found: "/usr/bin/strip"
+    found: "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/strip"
     search_context:
       ENV{PATH}:
         - "/Users/annadata/.rbenv/shims"
@@ -637,7 +682,7 @@ events:
     names:
       - "ld"
     candidate_directories:
-      - "/usr/bin/"
+      - "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/"
       - "/Users/annadata/.rbenv/shims/"
       - "/Library/Frameworks/Python.framework/Versions/3.14/bin/"
       - "/Users/annadata/.gem/bin/"
@@ -645,6 +690,7 @@ events:
       - "/Users/annadata/.npm-global/bin/"
       - "/usr/local/bin/"
       - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
       - "/bin/"
       - "/usr/sbin/"
       - "/sbin/"
@@ -658,7 +704,7 @@ events:
       - "/Users/annadata/Library/Android/sdk/platform-tools/"
       - "/Users/annadata/Library/Android/sdk/tools/"
       - "/Users/annadata/Library/Android/sdk/tools/bin/"
-    found: "/usr/bin/ld"
+    found: "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld"
     search_context:
       ENV{PATH}:
         - "/Users/annadata/.rbenv/shims"
@@ -710,7 +756,7 @@ events:
     names:
       - "nm"
     candidate_directories:
-      - "/usr/bin/"
+      - "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/"
       - "/Users/annadata/.rbenv/shims/"
       - "/Library/Frameworks/Python.framework/Versions/3.14/bin/"
       - "/Users/annadata/.gem/bin/"
@@ -718,6 +764,7 @@ events:
       - "/Users/annadata/.npm-global/bin/"
       - "/usr/local/bin/"
       - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
       - "/bin/"
       - "/usr/sbin/"
       - "/sbin/"
@@ -731,7 +778,7 @@ events:
       - "/Users/annadata/Library/Android/sdk/platform-tools/"
       - "/Users/annadata/Library/Android/sdk/tools/"
       - "/Users/annadata/Library/Android/sdk/tools/bin/"
-    found: "/usr/bin/nm"
+    found: "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/nm"
     search_context:
       ENV{PATH}:
         - "/Users/annadata/.rbenv/shims"
@@ -783,7 +830,7 @@ events:
     names:
       - "objdump"
     candidate_directories:
-      - "/usr/bin/"
+      - "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/"
       - "/Users/annadata/.rbenv/shims/"
       - "/Library/Frameworks/Python.framework/Versions/3.14/bin/"
       - "/Users/annadata/.gem/bin/"
@@ -791,6 +838,7 @@ events:
       - "/Users/annadata/.npm-global/bin/"
       - "/usr/local/bin/"
       - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
       - "/bin/"
       - "/usr/sbin/"
       - "/sbin/"
@@ -804,7 +852,7 @@ events:
       - "/Users/annadata/Library/Android/sdk/platform-tools/"
       - "/Users/annadata/Library/Android/sdk/tools/"
       - "/Users/annadata/Library/Android/sdk/tools/bin/"
-    found: "/usr/bin/objdump"
+    found: "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/objdump"
     search_context:
       ENV{PATH}:
         - "/Users/annadata/.rbenv/shims"
@@ -856,7 +904,7 @@ events:
     names:
       - "objcopy"
     candidate_directories:
-      - "/usr/bin/"
+      - "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/"
       - "/Users/annadata/.rbenv/shims/"
       - "/Library/Frameworks/Python.framework/Versions/3.14/bin/"
       - "/Users/annadata/.gem/bin/"
@@ -864,6 +912,7 @@ events:
       - "/Users/annadata/.npm-global/bin/"
       - "/usr/local/bin/"
       - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
       - "/bin/"
       - "/usr/sbin/"
       - "/sbin/"
@@ -878,7 +927,7 @@ events:
       - "/Users/annadata/Library/Android/sdk/tools/"
       - "/Users/annadata/Library/Android/sdk/tools/bin/"
     searched_directories:
-      - "/usr/bin/objcopy"
+      - "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/objcopy"
       - "/Users/annadata/.rbenv/shims/objcopy"
       - "/Library/Frameworks/Python.framework/Versions/3.14/bin/objcopy"
       - "/Users/annadata/.gem/bin/objcopy"
@@ -886,6 +935,7 @@ events:
       - "/Users/annadata/.npm-global/bin/objcopy"
       - "/usr/local/bin/objcopy"
       - "/System/Cryptexes/App/usr/bin/objcopy"
+      - "/usr/bin/objcopy"
       - "/bin/objcopy"
       - "/usr/sbin/objcopy"
       - "/sbin/objcopy"
@@ -951,7 +1001,7 @@ events:
     names:
       - "readelf"
     candidate_directories:
-      - "/usr/bin/"
+      - "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/"
       - "/Users/annadata/.rbenv/shims/"
       - "/Library/Frameworks/Python.framework/Versions/3.14/bin/"
       - "/Users/annadata/.gem/bin/"
@@ -959,6 +1009,7 @@ events:
       - "/Users/annadata/.npm-global/bin/"
       - "/usr/local/bin/"
       - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
       - "/bin/"
       - "/usr/sbin/"
       - "/sbin/"
@@ -973,7 +1024,7 @@ events:
       - "/Users/annadata/Library/Android/sdk/tools/"
       - "/Users/annadata/Library/Android/sdk/tools/bin/"
     searched_directories:
-      - "/usr/bin/readelf"
+      - "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/readelf"
       - "/Users/annadata/.rbenv/shims/readelf"
       - "/Library/Frameworks/Python.framework/Versions/3.14/bin/readelf"
       - "/Users/annadata/.gem/bin/readelf"
@@ -981,6 +1032,7 @@ events:
       - "/Users/annadata/.npm-global/bin/readelf"
       - "/usr/local/bin/readelf"
       - "/System/Cryptexes/App/usr/bin/readelf"
+      - "/usr/bin/readelf"
       - "/bin/readelf"
       - "/usr/sbin/readelf"
       - "/sbin/readelf"
@@ -1046,7 +1098,7 @@ events:
     names:
       - "dlltool"
     candidate_directories:
-      - "/usr/bin/"
+      - "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/"
       - "/Users/annadata/.rbenv/shims/"
       - "/Library/Frameworks/Python.framework/Versions/3.14/bin/"
       - "/Users/annadata/.gem/bin/"
@@ -1054,6 +1106,7 @@ events:
       - "/Users/annadata/.npm-global/bin/"
       - "/usr/local/bin/"
       - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
       - "/bin/"
       - "/usr/sbin/"
       - "/sbin/"
@@ -1068,7 +1121,7 @@ events:
       - "/Users/annadata/Library/Android/sdk/tools/"
       - "/Users/annadata/Library/Android/sdk/tools/bin/"
     searched_directories:
-      - "/usr/bin/dlltool"
+      - "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/dlltool"
       - "/Users/annadata/.rbenv/shims/dlltool"
       - "/Library/Frameworks/Python.framework/Versions/3.14/bin/dlltool"
       - "/Users/annadata/.gem/bin/dlltool"
@@ -1076,6 +1129,7 @@ events:
       - "/Users/annadata/.npm-global/bin/dlltool"
       - "/usr/local/bin/dlltool"
       - "/System/Cryptexes/App/usr/bin/dlltool"
+      - "/usr/bin/dlltool"
       - "/bin/dlltool"
       - "/usr/sbin/dlltool"
       - "/sbin/dlltool"
@@ -1141,7 +1195,7 @@ events:
     names:
       - "addr2line"
     candidate_directories:
-      - "/usr/bin/"
+      - "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/"
       - "/Users/annadata/.rbenv/shims/"
       - "/Library/Frameworks/Python.framework/Versions/3.14/bin/"
       - "/Users/annadata/.gem/bin/"
@@ -1149,6 +1203,7 @@ events:
       - "/Users/annadata/.npm-global/bin/"
       - "/usr/local/bin/"
       - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
       - "/bin/"
       - "/usr/sbin/"
       - "/sbin/"
@@ -1163,7 +1218,7 @@ events:
       - "/Users/annadata/Library/Android/sdk/tools/"
       - "/Users/annadata/Library/Android/sdk/tools/bin/"
     searched_directories:
-      - "/usr/bin/addr2line"
+      - "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/addr2line"
       - "/Users/annadata/.rbenv/shims/addr2line"
       - "/Library/Frameworks/Python.framework/Versions/3.14/bin/addr2line"
       - "/Users/annadata/.gem/bin/addr2line"
@@ -1171,6 +1226,7 @@ events:
       - "/Users/annadata/.npm-global/bin/addr2line"
       - "/usr/local/bin/addr2line"
       - "/System/Cryptexes/App/usr/bin/addr2line"
+      - "/usr/bin/addr2line"
       - "/bin/addr2line"
       - "/usr/sbin/addr2line"
       - "/sbin/addr2line"
@@ -1236,7 +1292,7 @@ events:
     names:
       - "tapi"
     candidate_directories:
-      - "/usr/bin/"
+      - "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/"
       - "/Users/annadata/.rbenv/shims/"
       - "/Library/Frameworks/Python.framework/Versions/3.14/bin/"
       - "/Users/annadata/.gem/bin/"
@@ -1244,6 +1300,7 @@ events:
       - "/Users/annadata/.npm-global/bin/"
       - "/usr/local/bin/"
       - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
       - "/bin/"
       - "/usr/sbin/"
       - "/sbin/"
@@ -1257,29 +1314,7 @@ events:
       - "/Users/annadata/Library/Android/sdk/platform-tools/"
       - "/Users/annadata/Library/Android/sdk/tools/"
       - "/Users/annadata/Library/Android/sdk/tools/bin/"
-    searched_directories:
-      - "/usr/bin/tapi"
-      - "/Users/annadata/.rbenv/shims/tapi"
-      - "/Library/Frameworks/Python.framework/Versions/3.14/bin/tapi"
-      - "/Users/annadata/.gem/bin/tapi"
-      - "/opt/homebrew/opt/openjdk@21/bin/tapi"
-      - "/Users/annadata/.npm-global/bin/tapi"
-      - "/usr/local/bin/tapi"
-      - "/System/Cryptexes/App/usr/bin/tapi"
-      - "/bin/tapi"
-      - "/usr/sbin/tapi"
-      - "/sbin/tapi"
-      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/tapi"
-      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/tapi"
-      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/tapi"
-      - "/opt/pmk/env/global/bin/tapi"
-      - "/Library/Apple/usr/bin/tapi"
-      - "/opt/homebrew/bin/tapi"
-      - "/Users/annadata/Library/Android/sdk/emulator/tapi"
-      - "/Users/annadata/Library/Android/sdk/platform-tools/tapi"
-      - "/Users/annadata/Library/Android/sdk/tools/tapi"
-      - "/Users/annadata/Library/Android/sdk/tools/bin/tapi"
-    found: false
+    found: "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/tapi"
     search_context:
       ENV{PATH}:
         - "/Users/annadata/.rbenv/shims"
@@ -1445,8 +1480,8 @@ events:
     checks:
       - "Detecting C compiler ABI info"
     directories:
-      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-Wg81PN"
-      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-Wg81PN"
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-rXut8j"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-rXut8j"
     cmakeVariables:
       CMAKE_C_FLAGS: ""
       CMAKE_C_FLAGS_DEBUG: "-g"
@@ -1458,18 +1493,18 @@ events:
       variable: "CMAKE_C_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-Wg81PN'
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-rXut8j'
         
-        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_4d427/fast
-        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_4d427.dir/build.make CMakeFiles/cmTC_4d427.dir/build
-        Building C object CMakeFiles/cmTC_4d427.dir/CMakeCCompilerABI.c.o
-        /usr/bin/cc   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0   -v -Wl,-v -MD -MT CMakeFiles/cmTC_4d427.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_4d427.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_4d427.dir/CMakeCCompilerABI.c.o -c /opt/homebrew/share/cmake/Modules/CMakeCCompilerABI.c
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_88bf0/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_88bf0.dir/build.make CMakeFiles/cmTC_88bf0.dir/build
+        Building C object CMakeFiles/cmTC_88bf0.dir/CMakeCCompilerABI.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0   -v -Wl,-v -MD -MT CMakeFiles/cmTC_88bf0.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_88bf0.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_88bf0.dir/CMakeCCompilerABI.c.o -c /opt/homebrew/share/cmake/Modules/CMakeCCompilerABI.c
         Apple clang version 17.0.0 (clang-1700.6.3.2)
         Target: arm64-apple-darwin25.2.0
         Thread model: posix
         InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin
         clang: warning: -Wl,-v: 'linker' input unused [-Wunused-command-line-argument]
-         "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple arm64-apple-ios15.0.0 -Wundef-prefix=TARGET_OS_ -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -mframe-pointer=non-leaf -fno-strict-return -ffp-contract=on -fno-rounding-math -funwind-tables=1 -fobjc-msgsend-selector-stubs -target-sdk-version=26.2 -fvisibility-inlines-hidden-static-local-var -fdefine-target-os-macros -fno-assume-unique-vtables -fno-modulemap-allow-subdirectory-search -target-cpu apple-a7 -target-feature +zcm -target-feature +zcz -target-feature +v8a -target-feature +aes -target-feature +fp-armv8 -target-feature +neon -target-feature +perfmon -target-feature +sha2 -target-abi darwinpcs -debugger-tuning=lldb -fdebug-compilation-dir=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-Wg81PN -target-linker-version 1230.1 -v -fcoverage-compilation-dir=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-Wg81PN -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/17 -dependency-file CMakeFiles/cmTC_4d427.dir/CMakeCCompilerABI.c.o.d -skip-unused-modulemap-deps -MT CMakeFiles/cmTC_4d427.dir/CMakeCCompilerABI.c.o -sys-header-deps -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -internal-isystem /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/usr/local/include -internal-isystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/17/include -internal-externc-isystem /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/usr/include -internal-externc-isystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -internal-iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks -internal-iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/SubFrameworks -internal-iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Library/Frameworks -Wno-reorder-init-list -Wno-implicit-int-float-conversion -Wno-c99-designator -Wno-final-dtor-non-final-class -Wno-extra-semi-stmt -Wno-misleading-indentation -Wno-quoted-include-in-framework-header -Wno-implicit-fallthrough -Wno-enum-enum-conversion -Wno-enum-float-conversion -Wno-elaborated-enum-base -ferror-limit 19 -stack-protector 1 -fstack-check -mdarwin-stkchk-strong-link -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fmax-type-align=16 -fcommon -clang-vendor-feature=+disableNonDependentMemberExprInCurrentInstantiation -fno-odr-hash-protocols -clang-vendor-feature=+enableAggressiveVLAFolding -clang-vendor-feature=+revert09abecef7bbf -clang-vendor-feature=+thisNoAlignAttr -clang-vendor-feature=+thisNoNullAttr -clang-vendor-feature=+disableAtImportPrivateFrameworkInImplementationError -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_4d427.dir/CMakeCCompilerABI.c.o -x c /opt/homebrew/share/cmake/Modules/CMakeCCompilerABI.c
+         "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple arm64-apple-ios15.0.0 -Wundef-prefix=TARGET_OS_ -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -mframe-pointer=non-leaf -fno-strict-return -ffp-contract=on -fno-rounding-math -funwind-tables=1 -fobjc-msgsend-selector-stubs -target-sdk-version=26.2 -fvisibility-inlines-hidden-static-local-var -fdefine-target-os-macros -fno-assume-unique-vtables -fno-modulemap-allow-subdirectory-search -target-cpu apple-a7 -target-feature +zcm -target-feature +zcz -target-feature +v8a -target-feature +aes -target-feature +fp-armv8 -target-feature +neon -target-feature +perfmon -target-feature +sha2 -target-abi darwinpcs -debugger-tuning=lldb -fdebug-compilation-dir=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-rXut8j -target-linker-version 1230.1 -v -fcoverage-compilation-dir=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-rXut8j -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/17 -dependency-file CMakeFiles/cmTC_88bf0.dir/CMakeCCompilerABI.c.o.d -skip-unused-modulemap-deps -MT CMakeFiles/cmTC_88bf0.dir/CMakeCCompilerABI.c.o -sys-header-deps -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -internal-isystem /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/usr/local/include -internal-isystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/17/include -internal-externc-isystem /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/usr/include -internal-externc-isystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -internal-iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks -internal-iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/SubFrameworks -internal-iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Library/Frameworks -Wno-reorder-init-list -Wno-implicit-int-float-conversion -Wno-c99-designator -Wno-final-dtor-non-final-class -Wno-extra-semi-stmt -Wno-misleading-indentation -Wno-quoted-include-in-framework-header -Wno-implicit-fallthrough -Wno-enum-enum-conversion -Wno-enum-float-conversion -Wno-elaborated-enum-base -ferror-limit 19 -stack-protector 1 -fstack-check -mdarwin-stkchk-strong-link -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fmax-type-align=16 -fcommon -clang-vendor-feature=+disableNonDependentMemberExprInCurrentInstantiation -fno-odr-hash-protocols -clang-vendor-feature=+enableAggressiveVLAFolding -clang-vendor-feature=+revert09abecef7bbf -clang-vendor-feature=+thisNoAlignAttr -clang-vendor-feature=+thisNoNullAttr -clang-vendor-feature=+disableAtImportPrivateFrameworkInImplementationError -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_88bf0.dir/CMakeCCompilerABI.c.o -x c /opt/homebrew/share/cmake/Modules/CMakeCCompilerABI.c
         clang -cc1 version 17.0.0 (clang-1700.6.3.2) default target arm64-apple-darwin25.2.0
         ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/usr/local/include"
         ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Library/Frameworks"
@@ -1481,13 +1516,13 @@ events:
          /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks (framework directory)
          /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/SubFrameworks (framework directory)
         End of search list.
-        Linking C executable cmTC_4d427.app/cmTC_4d427
-        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_4d427.dir/link.txt --verbose=1
+        Linking C executable cmTC_88bf0.app/cmTC_88bf0
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_88bf0.dir/link.txt --verbose=1
         Apple clang version 17.0.0 (clang-1700.6.3.2)
         Target: arm64-apple-darwin25.2.0
         Thread model: posix
         InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin
-         "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld" -demangle -lto_library /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/libLTO.dylib -dynamic -arch arm64 -platform_version ios 15.0.0 26.2 -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -mllvm -enable-linkonceodr-outlining -o cmTC_4d427.app/cmTC_4d427 -headerpad_max_install_names -v CMakeFiles/cmTC_4d427.dir/CMakeCCompilerABI.c.o -lSystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/17/lib/darwin/libclang_rt.ios.a
+         "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld" -demangle -lto_library /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/libLTO.dylib -dynamic -arch arm64 -platform_version ios 15.0.0 26.2 -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -mllvm -enable-linkonceodr-outlining -o cmTC_88bf0.app/cmTC_88bf0 -headerpad_max_install_names -v CMakeFiles/cmTC_88bf0.dir/CMakeCCompilerABI.c.o -lSystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/17/lib/darwin/libclang_rt.ios.a
         @(#)PROGRAM:ld PROJECT:ld-1230.1
         BUILD 06:36:05 Dec  2 2025
         configured to support archs: armv6 armv7 armv7s arm64 arm64e arm64_32 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em armv8m.main armv8.1m.main
@@ -1499,7 +1534,7 @@ events:
         	/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/usr/lib/swift
         Framework search paths:
         	/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks
-        /usr/bin/cc  -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -Wl,-headerpad_max_install_names  -v -Wl,-v CMakeFiles/cmTC_4d427.dir/CMakeCCompilerABI.c.o -o cmTC_4d427.app/cmTC_4d427
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang  -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -Wl,-headerpad_max_install_names  -v -Wl,-v CMakeFiles/cmTC_88bf0.dir/CMakeCCompilerABI.c.o -o cmTC_88bf0.app/cmTC_88bf0
         
       exitCode: 0
   -
@@ -1532,18 +1567,18 @@ events:
       Parsed C implicit link information:
         link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
         linker tool regex: [^[ 	]*(->|"|[0-9]+>[ 	-]*Build:[ 	0-9]+ ms[ 	]*)?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)))("|,| |$)]
-        ignore line: [Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-Wg81PN']
+        ignore line: [Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-rXut8j']
         ignore line: []
-        ignore line: [Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_4d427/fast]
-        ignore line: [/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_4d427.dir/build.make CMakeFiles/cmTC_4d427.dir/build]
-        ignore line: [Building C object CMakeFiles/cmTC_4d427.dir/CMakeCCompilerABI.c.o]
-        ignore line: [/usr/bin/cc   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0   -v -Wl -v -MD -MT CMakeFiles/cmTC_4d427.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_4d427.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_4d427.dir/CMakeCCompilerABI.c.o -c /opt/homebrew/share/cmake/Modules/CMakeCCompilerABI.c]
+        ignore line: [Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_88bf0/fast]
+        ignore line: [/Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_88bf0.dir/build.make CMakeFiles/cmTC_88bf0.dir/build]
+        ignore line: [Building C object CMakeFiles/cmTC_88bf0.dir/CMakeCCompilerABI.c.o]
+        ignore line: [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0   -v -Wl -v -MD -MT CMakeFiles/cmTC_88bf0.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_88bf0.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_88bf0.dir/CMakeCCompilerABI.c.o -c /opt/homebrew/share/cmake/Modules/CMakeCCompilerABI.c]
         ignore line: [Apple clang version 17.0.0 (clang-1700.6.3.2)]
         ignore line: [Target: arm64-apple-darwin25.2.0]
         ignore line: [Thread model: posix]
         ignore line: [InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin]
         ignore line: [clang: warning: -Wl -v: 'linker' input unused [-Wunused-command-line-argument]]
-        ignore line: [ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple arm64-apple-ios15.0.0 -Wundef-prefix=TARGET_OS_ -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -mframe-pointer=non-leaf -fno-strict-return -ffp-contract=on -fno-rounding-math -funwind-tables=1 -fobjc-msgsend-selector-stubs -target-sdk-version=26.2 -fvisibility-inlines-hidden-static-local-var -fdefine-target-os-macros -fno-assume-unique-vtables -fno-modulemap-allow-subdirectory-search -target-cpu apple-a7 -target-feature +zcm -target-feature +zcz -target-feature +v8a -target-feature +aes -target-feature +fp-armv8 -target-feature +neon -target-feature +perfmon -target-feature +sha2 -target-abi darwinpcs -debugger-tuning=lldb -fdebug-compilation-dir=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-Wg81PN -target-linker-version 1230.1 -v -fcoverage-compilation-dir=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-Wg81PN -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/17 -dependency-file CMakeFiles/cmTC_4d427.dir/CMakeCCompilerABI.c.o.d -skip-unused-modulemap-deps -MT CMakeFiles/cmTC_4d427.dir/CMakeCCompilerABI.c.o -sys-header-deps -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -internal-isystem /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/usr/local/include -internal-isystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/17/include -internal-externc-isystem /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/usr/include -internal-externc-isystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -internal-iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks -internal-iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/SubFrameworks -internal-iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Library/Frameworks -Wno-reorder-init-list -Wno-implicit-int-float-conversion -Wno-c99-designator -Wno-final-dtor-non-final-class -Wno-extra-semi-stmt -Wno-misleading-indentation -Wno-quoted-include-in-framework-header -Wno-implicit-fallthrough -Wno-enum-enum-conversion -Wno-enum-float-conversion -Wno-elaborated-enum-base -ferror-limit 19 -stack-protector 1 -fstack-check -mdarwin-stkchk-strong-link -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fmax-type-align=16 -fcommon -clang-vendor-feature=+disableNonDependentMemberExprInCurrentInstantiation -fno-odr-hash-protocols -clang-vendor-feature=+enableAggressiveVLAFolding -clang-vendor-feature=+revert09abecef7bbf -clang-vendor-feature=+thisNoAlignAttr -clang-vendor-feature=+thisNoNullAttr -clang-vendor-feature=+disableAtImportPrivateFrameworkInImplementationError -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_4d427.dir/CMakeCCompilerABI.c.o -x c /opt/homebrew/share/cmake/Modules/CMakeCCompilerABI.c]
+        ignore line: [ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang" -cc1 -triple arm64-apple-ios15.0.0 -Wundef-prefix=TARGET_OS_ -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -Werror=implicit-function-declaration -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -mframe-pointer=non-leaf -fno-strict-return -ffp-contract=on -fno-rounding-math -funwind-tables=1 -fobjc-msgsend-selector-stubs -target-sdk-version=26.2 -fvisibility-inlines-hidden-static-local-var -fdefine-target-os-macros -fno-assume-unique-vtables -fno-modulemap-allow-subdirectory-search -target-cpu apple-a7 -target-feature +zcm -target-feature +zcz -target-feature +v8a -target-feature +aes -target-feature +fp-armv8 -target-feature +neon -target-feature +perfmon -target-feature +sha2 -target-abi darwinpcs -debugger-tuning=lldb -fdebug-compilation-dir=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-rXut8j -target-linker-version 1230.1 -v -fcoverage-compilation-dir=/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-rXut8j -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/17 -dependency-file CMakeFiles/cmTC_88bf0.dir/CMakeCCompilerABI.c.o.d -skip-unused-modulemap-deps -MT CMakeFiles/cmTC_88bf0.dir/CMakeCCompilerABI.c.o -sys-header-deps -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -internal-isystem /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/usr/local/include -internal-isystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/17/include -internal-externc-isystem /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/usr/include -internal-externc-isystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -internal-iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks -internal-iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/SubFrameworks -internal-iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Library/Frameworks -Wno-reorder-init-list -Wno-implicit-int-float-conversion -Wno-c99-designator -Wno-final-dtor-non-final-class -Wno-extra-semi-stmt -Wno-misleading-indentation -Wno-quoted-include-in-framework-header -Wno-implicit-fallthrough -Wno-enum-enum-conversion -Wno-enum-float-conversion -Wno-elaborated-enum-base -ferror-limit 19 -stack-protector 1 -fstack-check -mdarwin-stkchk-strong-link -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fmax-type-align=16 -fcommon -clang-vendor-feature=+disableNonDependentMemberExprInCurrentInstantiation -fno-odr-hash-protocols -clang-vendor-feature=+enableAggressiveVLAFolding -clang-vendor-feature=+revert09abecef7bbf -clang-vendor-feature=+thisNoAlignAttr -clang-vendor-feature=+thisNoNullAttr -clang-vendor-feature=+disableAtImportPrivateFrameworkInImplementationError -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_88bf0.dir/CMakeCCompilerABI.c.o -x c /opt/homebrew/share/cmake/Modules/CMakeCCompilerABI.c]
         ignore line: [clang -cc1 version 17.0.0 (clang-1700.6.3.2) default target arm64-apple-darwin25.2.0]
         ignore line: [ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/usr/local/include"]
         ignore line: [ignoring nonexistent directory "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Library/Frameworks"]
@@ -1555,13 +1590,13 @@ events:
         ignore line: [ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks (framework directory)]
         ignore line: [ /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/SubFrameworks (framework directory)]
         ignore line: [End of search list.]
-        ignore line: [Linking C executable cmTC_4d427.app/cmTC_4d427]
-        ignore line: [/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_4d427.dir/link.txt --verbose=1]
+        ignore line: [Linking C executable cmTC_88bf0.app/cmTC_88bf0]
+        ignore line: [/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_88bf0.dir/link.txt --verbose=1]
         ignore line: [Apple clang version 17.0.0 (clang-1700.6.3.2)]
         ignore line: [Target: arm64-apple-darwin25.2.0]
         ignore line: [Thread model: posix]
         ignore line: [InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin]
-        link line: [ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld" -demangle -lto_library /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/libLTO.dylib -dynamic -arch arm64 -platform_version ios 15.0.0 26.2 -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -mllvm -enable-linkonceodr-outlining -o cmTC_4d427.app/cmTC_4d427 -headerpad_max_install_names -v CMakeFiles/cmTC_4d427.dir/CMakeCCompilerABI.c.o -lSystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/17/lib/darwin/libclang_rt.ios.a]
+        link line: [ "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld" -demangle -lto_library /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/libLTO.dylib -dynamic -arch arm64 -platform_version ios 15.0.0 26.2 -syslibroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -mllvm -enable-linkonceodr-outlining -o cmTC_88bf0.app/cmTC_88bf0 -headerpad_max_install_names -v CMakeFiles/cmTC_88bf0.dir/CMakeCCompilerABI.c.o -lSystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/17/lib/darwin/libclang_rt.ios.a]
           arg [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld] ==> ignore
           arg [-demangle] ==> ignore
           arg [-lto_library] ==> ignore, skip following value
@@ -1578,10 +1613,10 @@ events:
           arg [-mllvm] ==> ignore
           arg [-enable-linkonceodr-outlining] ==> ignore
           arg [-o] ==> ignore
-          arg [cmTC_4d427.app/cmTC_4d427] ==> ignore
+          arg [cmTC_88bf0.app/cmTC_88bf0] ==> ignore
           arg [-headerpad_max_install_names] ==> ignore
           arg [-v] ==> ignore
-          arg [CMakeFiles/cmTC_4d427.dir/CMakeCCompilerABI.c.o] ==> ignore
+          arg [CMakeFiles/cmTC_88bf0.dir/CMakeCCompilerABI.c.o] ==> ignore
           arg [-lSystem] ==> lib [System]
           arg [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/17/lib/darwin/libclang_rt.ios.a] ==> lib [/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/17/lib/darwin/libclang_rt.ios.a]
         linker tool for 'C': /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld
@@ -2104,251 +2139,6 @@ events:
         - "/Network/Library/Frameworks"
         - "/System/Library/Frameworks"
   -
-    kind: "find-v1"
-    backtrace:
-      - "/opt/homebrew/share/cmake/Modules/FindOpenSSL.cmake:370 (find_path)"
-      - "CMakeLists.txt:141 (find_package)"
-    mode: "path"
-    variable: "OPENSSL_INCLUDE_DIR"
-    description: "Path to a file."
-    settings:
-      SearchFramework: "FIRST"
-      SearchAppBundle: "FIRST"
-      CMAKE_FIND_USE_CMAKE_PATH: true
-      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
-      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
-      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
-      CMAKE_FIND_USE_INSTALL_PREFIX: true
-    names:
-      - "openssl/ssl.h"
-    candidate_directories:
-      - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ngtcp2/install/openssl-ios/include/"
-      - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ngtcp2/install/openssl-ios/"
-      - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/opt/homebrew/Cellar/openssl@3/3.6.0/include/include/"
-      - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/opt/homebrew/Cellar/openssl@3/3.6.0/include/"
-    searched_directories:
-      - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ngtcp2/install/openssl-ios/include/openssl.framework/Headers/ssl.h"
-      - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ngtcp2/install/openssl-ios/openssl.framework/Headers/ssl.h"
-      - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/opt/homebrew/Cellar/openssl@3/3.6.0/include/include/openssl.framework/Headers/ssl.h"
-      - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/opt/homebrew/Cellar/openssl@3/3.6.0/include/openssl.framework/Headers/ssl.h"
-      - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ngtcp2/install/openssl-ios/include/openssl/ssl.h"
-      - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ngtcp2/install/openssl-ios/openssl/ssl.h"
-      - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/opt/homebrew/Cellar/openssl@3/3.6.0/include/include/openssl/ssl.h"
-      - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/opt/homebrew/Cellar/openssl@3/3.6.0/include/openssl/ssl.h"
-    found: false
-    search_context:
-      ENV{PATH}:
-        - "/Users/annadata/.rbenv/shims"
-        - "/Library/Frameworks/Python.framework/Versions/3.14/bin"
-        - "/Users/annadata/.gem/bin"
-        - "/opt/homebrew/opt/openjdk@21/bin"
-        - "/Users/annadata/.npm-global/bin"
-        - "/usr/local/bin"
-        - "/System/Cryptexes/App/usr/bin"
-        - "/usr/bin"
-        - "/bin"
-        - "/usr/sbin"
-        - "/sbin"
-        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
-        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
-        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
-        - "/opt/pmk/env/global/bin"
-        - "/Library/Apple/usr/bin"
-        - "/opt/homebrew/bin"
-        - "/Library/Frameworks/Python.framework/Versions/3.14/bin"
-        - "/opt/homebrew/opt/openjdk@21/bin"
-        - "/Users/annadata/.npm-global/bin"
-        - "/Users/annadata/Library/Android/sdk/emulator"
-        - "/Users/annadata/Library/Android/sdk/platform-tools"
-        - "/Users/annadata/Library/Android/sdk/tools"
-        - "/Users/annadata/Library/Android/sdk/tools/bin"
-        - "/Users/annadata/Library/Android/sdk/emulator"
-        - "/Users/annadata/Library/Android/sdk/platform-tools"
-        - "/Users/annadata/Library/Android/sdk/tools"
-        - "/Users/annadata/Library/Android/sdk/tools/bin"
-      CMAKE_INSTALL_PREFIX: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/install"
-      CMAKE_SYSTEM_PREFIX_PATH:
-        - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/usr"
-        - "/usr/local"
-        - "/usr"
-        - "/"
-        - "/opt/homebrew"
-        - "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/install"
-        - "/usr/X11R6"
-        - "/usr/pkg"
-        - "/opt"
-        - "/sw"
-        - "/opt/local"
-      CMAKE_SYSTEM_INCLUDE_PATH:
-        - "/usr/include/X11"
-      CMAKE_FIND_ROOT_PATH: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
-      CMAKE_SYSTEM_FRAMEWORK_PATH:
-        - "~/Library/Frameworks"
-        - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Library/Frameworks"
-        - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Network/Library/Frameworks"
-        - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks"
-        - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks"
-        - "/Applications/Xcode.app/Contents/Developer/Library/Frameworks"
-        - "/Library/Frameworks"
-        - "/Network/Library/Frameworks"
-        - "/System/Library/Frameworks"
-  -
-    kind: "find-v1"
-    backtrace:
-      - "/opt/homebrew/share/cmake/Modules/FindOpenSSL.cmake:628 (find_library)"
-      - "CMakeLists.txt:141 (find_package)"
-    mode: "library"
-    variable: "OPENSSL_SSL_LIBRARY"
-    description: "Path to a library."
-    settings:
-      SearchFramework: "FIRST"
-      SearchAppBundle: "FIRST"
-      CMAKE_FIND_USE_CMAKE_PATH: true
-      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
-      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
-      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
-      CMAKE_FIND_USE_INSTALL_PREFIX: true
-    names:
-      - "ssl"
-      - "ssleay32"
-      - "ssleay32MD"
-    found: false
-    search_context:
-      ENV{PATH}:
-        - "/Users/annadata/.rbenv/shims"
-        - "/Library/Frameworks/Python.framework/Versions/3.14/bin"
-        - "/Users/annadata/.gem/bin"
-        - "/opt/homebrew/opt/openjdk@21/bin"
-        - "/Users/annadata/.npm-global/bin"
-        - "/usr/local/bin"
-        - "/System/Cryptexes/App/usr/bin"
-        - "/usr/bin"
-        - "/bin"
-        - "/usr/sbin"
-        - "/sbin"
-        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
-        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
-        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
-        - "/opt/pmk/env/global/bin"
-        - "/Library/Apple/usr/bin"
-        - "/opt/homebrew/bin"
-        - "/Library/Frameworks/Python.framework/Versions/3.14/bin"
-        - "/opt/homebrew/opt/openjdk@21/bin"
-        - "/Users/annadata/.npm-global/bin"
-        - "/Users/annadata/Library/Android/sdk/emulator"
-        - "/Users/annadata/Library/Android/sdk/platform-tools"
-        - "/Users/annadata/Library/Android/sdk/tools"
-        - "/Users/annadata/Library/Android/sdk/tools/bin"
-        - "/Users/annadata/Library/Android/sdk/emulator"
-        - "/Users/annadata/Library/Android/sdk/platform-tools"
-        - "/Users/annadata/Library/Android/sdk/tools"
-        - "/Users/annadata/Library/Android/sdk/tools/bin"
-      CMAKE_INSTALL_PREFIX: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/install"
-      CMAKE_SYSTEM_PREFIX_PATH:
-        - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/usr"
-        - "/usr/local"
-        - "/usr"
-        - "/"
-        - "/opt/homebrew"
-        - "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/install"
-        - "/usr/X11R6"
-        - "/usr/pkg"
-        - "/opt"
-        - "/sw"
-        - "/opt/local"
-      CMAKE_SYSTEM_LIBRARY_PATH:
-        - "/usr/lib/X11"
-      CMAKE_FIND_ROOT_PATH: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
-      CMAKE_SYSTEM_FRAMEWORK_PATH:
-        - "~/Library/Frameworks"
-        - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Library/Frameworks"
-        - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Network/Library/Frameworks"
-        - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks"
-        - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks"
-        - "/Applications/Xcode.app/Contents/Developer/Library/Frameworks"
-        - "/Library/Frameworks"
-        - "/Network/Library/Frameworks"
-        - "/System/Library/Frameworks"
-  -
-    kind: "find-v1"
-    backtrace:
-      - "/opt/homebrew/share/cmake/Modules/FindOpenSSL.cmake:642 (find_library)"
-      - "CMakeLists.txt:141 (find_package)"
-    mode: "library"
-    variable: "OPENSSL_CRYPTO_LIBRARY"
-    description: "Path to a library."
-    settings:
-      SearchFramework: "FIRST"
-      SearchAppBundle: "FIRST"
-      CMAKE_FIND_USE_CMAKE_PATH: true
-      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
-      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
-      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
-      CMAKE_FIND_USE_INSTALL_PREFIX: true
-    names:
-      - "crypto"
-    found: false
-    search_context:
-      ENV{PATH}:
-        - "/Users/annadata/.rbenv/shims"
-        - "/Library/Frameworks/Python.framework/Versions/3.14/bin"
-        - "/Users/annadata/.gem/bin"
-        - "/opt/homebrew/opt/openjdk@21/bin"
-        - "/Users/annadata/.npm-global/bin"
-        - "/usr/local/bin"
-        - "/System/Cryptexes/App/usr/bin"
-        - "/usr/bin"
-        - "/bin"
-        - "/usr/sbin"
-        - "/sbin"
-        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
-        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
-        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
-        - "/opt/pmk/env/global/bin"
-        - "/Library/Apple/usr/bin"
-        - "/opt/homebrew/bin"
-        - "/Library/Frameworks/Python.framework/Versions/3.14/bin"
-        - "/opt/homebrew/opt/openjdk@21/bin"
-        - "/Users/annadata/.npm-global/bin"
-        - "/Users/annadata/Library/Android/sdk/emulator"
-        - "/Users/annadata/Library/Android/sdk/platform-tools"
-        - "/Users/annadata/Library/Android/sdk/tools"
-        - "/Users/annadata/Library/Android/sdk/tools/bin"
-        - "/Users/annadata/Library/Android/sdk/emulator"
-        - "/Users/annadata/Library/Android/sdk/platform-tools"
-        - "/Users/annadata/Library/Android/sdk/tools"
-        - "/Users/annadata/Library/Android/sdk/tools/bin"
-      CMAKE_INSTALL_PREFIX: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/install"
-      CMAKE_SYSTEM_PREFIX_PATH:
-        - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/usr"
-        - "/usr/local"
-        - "/usr"
-        - "/"
-        - "/opt/homebrew"
-        - "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/install"
-        - "/usr/X11R6"
-        - "/usr/pkg"
-        - "/opt"
-        - "/sw"
-        - "/opt/local"
-      CMAKE_SYSTEM_LIBRARY_PATH:
-        - "/usr/lib/X11"
-      CMAKE_FIND_ROOT_PATH: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
-      CMAKE_SYSTEM_FRAMEWORK_PATH:
-        - "~/Library/Frameworks"
-        - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Library/Frameworks"
-        - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Network/Library/Frameworks"
-        - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks"
-        - "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks"
-        - "/Applications/Xcode.app/Contents/Developer/Library/Frameworks"
-        - "/Library/Frameworks"
-        - "/Network/Library/Frameworks"
-        - "/System/Library/Frameworks"
-...
-
----
-events:
-  -
     kind: "try_compile-v1"
     backtrace:
       - "/opt/homebrew/share/cmake/Modules/CheckSymbolExists.cmake:193 (try_compile)"
@@ -2357,13 +2147,13 @@ events:
     checks:
       - "Looking for SSL_provide_quic_data"
     directories:
-      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-CkqJH1"
-      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-CkqJH1"
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-GwRPTO"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-GwRPTO"
     cmakeVariables:
       CMAKE_C_FLAGS: ""
       CMAKE_C_FLAGS_DEBUG: "-g"
       CMAKE_EXE_LINKER_FLAGS: ""
-      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ngtcp2/cmake;"
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
       CMAKE_OSX_ARCHITECTURES: "arm64"
       CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
       CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
@@ -2371,18 +2161,567 @@ events:
       variable: "HAVE_SSL_PROVIDE_QUIC_DATA"
       cached: true
       stdout: |
-        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-CkqJH1'
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-GwRPTO'
         
-        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_4225e/fast
-        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_4225e.dir/build.make CMakeFiles/cmTC_4225e.dir/build
-        Building C object CMakeFiles/cmTC_4225e.dir/CheckSymbolExists.c.o
-        /usr/bin/cc  -I/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/install/openssl-ios/include -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_4225e.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_4225e.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_4225e.dir/CheckSymbolExists.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-CkqJH1/CheckSymbolExists.c
-        /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-CkqJH1/CheckSymbolExists.c:2:10: fatal error: 'openssl/ssl.h' file not found
-            2 | #include <openssl/ssl.h>
-              |          ^~~~~~~~~~~~~~~
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_65e55/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_65e55.dir/build.make CMakeFiles/cmTC_65e55.dir/build
+        Building C object CMakeFiles/cmTC_65e55.dir/CheckSymbolExists.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang  -I/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/install/openssl-ios/include -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_65e55.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_65e55.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_65e55.dir/CheckSymbolExists.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-GwRPTO/CheckSymbolExists.c
+        Linking C executable cmTC_65e55.app/cmTC_65e55
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_65e55.dir/link.txt --verbose=1
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang  -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -Wl,-headerpad_max_install_names CMakeFiles/cmTC_65e55.dir/CheckSymbolExists.c.o -o cmTC_65e55.app/cmTC_65e55  /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/install/openssl-ios/lib/libssl.a /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/install/openssl-ios/lib/libcrypto.a
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CheckSymbolExists.cmake:193 (try_compile)"
+      - "/opt/homebrew/share/cmake/Modules/CheckSymbolExists.cmake:98 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:182 (check_symbol_exists)"
+    checks:
+      - "Looking for LIBRESSL_VERSION_NUMBER"
+    directories:
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-XaNnVF"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-XaNnVF"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
+      CMAKE_OSX_ARCHITECTURES: "arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
+    buildResult:
+      variable: "HAVE_LIBRESSL_VERSION_NUMBER"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-XaNnVF'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_aa67a/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_aa67a.dir/build.make CMakeFiles/cmTC_aa67a.dir/build
+        Building C object CMakeFiles/cmTC_aa67a.dir/CheckSymbolExists.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang  -I/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/install/openssl-ios/include -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_aa67a.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_aa67a.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_aa67a.dir/CheckSymbolExists.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-XaNnVF/CheckSymbolExists.c
+        /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-XaNnVF/CheckSymbolExists.c:8:19: error: use of undeclared identifier 'LIBRESSL_VERSION_NUMBER'
+            8 |   return ((int*)(&LIBRESSL_VERSION_NUMBER))[argc];
+              |                   ^
         1 error generated.
-        make[1]: *** [CMakeFiles/cmTC_4225e.dir/CheckSymbolExists.c.o] Error 1
-        make: *** [cmTC_4225e/fast] Error 2
+        make[1]: *** [CMakeFiles/cmTC_aa67a.dir/CheckSymbolExists.c.o] Error 1
+        make: *** [cmTC_aa67a/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CheckIncludeFile.cmake:174 (try_compile)"
+      - "CMakeLists.txt:307 (check_include_file)"
+    checks:
+      - "Looking for arpa/inet.h"
+    directories:
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-Smon52"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-Smon52"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
+      CMAKE_OSX_ARCHITECTURES: "arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
+    buildResult:
+      variable: "HAVE_ARPA_INET_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-Smon52'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_70bae/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_70bae.dir/build.make CMakeFiles/cmTC_70bae.dir/build
+        Building C object CMakeFiles/cmTC_70bae.dir/CheckIncludeFile.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_70bae.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_70bae.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_70bae.dir/CheckIncludeFile.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-Smon52/CheckIncludeFile.c
+        Linking C executable cmTC_70bae.app/cmTC_70bae
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_70bae.dir/link.txt --verbose=1
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang  -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -Wl,-headerpad_max_install_names CMakeFiles/cmTC_70bae.dir/CheckIncludeFile.c.o -o cmTC_70bae.app/cmTC_70bae
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CheckIncludeFile.cmake:174 (try_compile)"
+      - "CMakeLists.txt:308 (check_include_file)"
+    checks:
+      - "Looking for netinet/in.h"
+    directories:
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-WvNk82"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-WvNk82"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
+      CMAKE_OSX_ARCHITECTURES: "arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
+    buildResult:
+      variable: "HAVE_NETINET_IN_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-WvNk82'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_c3201/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_c3201.dir/build.make CMakeFiles/cmTC_c3201.dir/build
+        Building C object CMakeFiles/cmTC_c3201.dir/CheckIncludeFile.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_c3201.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_c3201.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_c3201.dir/CheckIncludeFile.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-WvNk82/CheckIncludeFile.c
+        Linking C executable cmTC_c3201.app/cmTC_c3201
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c3201.dir/link.txt --verbose=1
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang  -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -Wl,-headerpad_max_install_names CMakeFiles/cmTC_c3201.dir/CheckIncludeFile.c.o -o cmTC_c3201.app/cmTC_c3201
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CheckIncludeFile.cmake:174 (try_compile)"
+      - "CMakeLists.txt:309 (check_include_file)"
+    checks:
+      - "Looking for netinet/ip.h"
+    directories:
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-XYTPSt"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-XYTPSt"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
+      CMAKE_OSX_ARCHITECTURES: "arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
+    buildResult:
+      variable: "HAVE_NETINET_IP_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-XYTPSt'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_367a2/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_367a2.dir/build.make CMakeFiles/cmTC_367a2.dir/build
+        Building C object CMakeFiles/cmTC_367a2.dir/CheckIncludeFile.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_367a2.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_367a2.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_367a2.dir/CheckIncludeFile.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-XYTPSt/CheckIncludeFile.c
+        Linking C executable cmTC_367a2.app/cmTC_367a2
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_367a2.dir/link.txt --verbose=1
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang  -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -Wl,-headerpad_max_install_names CMakeFiles/cmTC_367a2.dir/CheckIncludeFile.c.o -o cmTC_367a2.app/cmTC_367a2
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CheckIncludeFile.cmake:174 (try_compile)"
+      - "CMakeLists.txt:310 (check_include_file)"
+    checks:
+      - "Looking for unistd.h"
+    directories:
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-CCPGy4"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-CCPGy4"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
+      CMAKE_OSX_ARCHITECTURES: "arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
+    buildResult:
+      variable: "HAVE_UNISTD_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-CCPGy4'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_32074/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_32074.dir/build.make CMakeFiles/cmTC_32074.dir/build
+        Building C object CMakeFiles/cmTC_32074.dir/CheckIncludeFile.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_32074.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_32074.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_32074.dir/CheckIncludeFile.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-CCPGy4/CheckIncludeFile.c
+        Linking C executable cmTC_32074.app/cmTC_32074
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_32074.dir/link.txt --verbose=1
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang  -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -Wl,-headerpad_max_install_names CMakeFiles/cmTC_32074.dir/CheckIncludeFile.c.o -o cmTC_32074.app/cmTC_32074
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CheckIncludeFile.cmake:174 (try_compile)"
+      - "CMakeLists.txt:311 (check_include_file)"
+    checks:
+      - "Looking for sys/endian.h"
+    directories:
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-C05IqG"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-C05IqG"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
+      CMAKE_OSX_ARCHITECTURES: "arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
+    buildResult:
+      variable: "HAVE_SYS_ENDIAN_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-C05IqG'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_3dfe5/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_3dfe5.dir/build.make CMakeFiles/cmTC_3dfe5.dir/build
+        Building C object CMakeFiles/cmTC_3dfe5.dir/CheckIncludeFile.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_3dfe5.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_3dfe5.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_3dfe5.dir/CheckIncludeFile.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-C05IqG/CheckIncludeFile.c
+        Linking C executable cmTC_3dfe5.app/cmTC_3dfe5
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_3dfe5.dir/link.txt --verbose=1
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang  -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -Wl,-headerpad_max_install_names CMakeFiles/cmTC_3dfe5.dir/CheckIncludeFile.c.o -o cmTC_3dfe5.app/cmTC_3dfe5
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CheckIncludeFile.cmake:174 (try_compile)"
+      - "CMakeLists.txt:312 (check_include_file)"
+    checks:
+      - "Looking for endian.h"
+    directories:
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-IAVYPb"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-IAVYPb"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
+      CMAKE_OSX_ARCHITECTURES: "arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
+    buildResult:
+      variable: "HAVE_ENDIAN_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-IAVYPb'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_b5ed3/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_b5ed3.dir/build.make CMakeFiles/cmTC_b5ed3.dir/build
+        Building C object CMakeFiles/cmTC_b5ed3.dir/CheckIncludeFile.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_b5ed3.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_b5ed3.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_b5ed3.dir/CheckIncludeFile.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-IAVYPb/CheckIncludeFile.c
+        Linking C executable cmTC_b5ed3.app/cmTC_b5ed3
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_b5ed3.dir/link.txt --verbose=1
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang  -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -Wl,-headerpad_max_install_names CMakeFiles/cmTC_b5ed3.dir/CheckIncludeFile.c.o -o cmTC_b5ed3.app/cmTC_b5ed3
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CheckIncludeFile.cmake:174 (try_compile)"
+      - "CMakeLists.txt:313 (check_include_file)"
+    checks:
+      - "Looking for byteswap.h"
+    directories:
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-ty0R2M"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-ty0R2M"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
+      CMAKE_OSX_ARCHITECTURES: "arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
+    buildResult:
+      variable: "HAVE_BYTESWAP_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-ty0R2M'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_c6d1f/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_c6d1f.dir/build.make CMakeFiles/cmTC_c6d1f.dir/build
+        Building C object CMakeFiles/cmTC_c6d1f.dir/CheckIncludeFile.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_c6d1f.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_c6d1f.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_c6d1f.dir/CheckIncludeFile.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-ty0R2M/CheckIncludeFile.c
+        /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-ty0R2M/CheckIncludeFile.c:1:10: fatal error: 'byteswap.h' file not found
+            1 | #include <byteswap.h>
+              |          ^~~~~~~~~~~~
+        1 error generated.
+        make[1]: *** [CMakeFiles/cmTC_c6d1f.dir/CheckIncludeFile.c.o] Error 1
+        make: *** [cmTC_c6d1f/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CheckIncludeFile.cmake:174 (try_compile)"
+      - "CMakeLists.txt:314 (check_include_file)"
+    checks:
+      - "Looking for asm/types.h"
+    directories:
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-v2ZXMy"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-v2ZXMy"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
+      CMAKE_OSX_ARCHITECTURES: "arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
+    buildResult:
+      variable: "HAVE_ASM_TYPES_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-v2ZXMy'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_67ed3/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_67ed3.dir/build.make CMakeFiles/cmTC_67ed3.dir/build
+        Building C object CMakeFiles/cmTC_67ed3.dir/CheckIncludeFile.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_67ed3.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_67ed3.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_67ed3.dir/CheckIncludeFile.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-v2ZXMy/CheckIncludeFile.c
+        /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-v2ZXMy/CheckIncludeFile.c:1:10: fatal error: 'asm/types.h' file not found
+            1 | #include <asm/types.h>
+              |          ^~~~~~~~~~~~~
+        1 error generated.
+        make[1]: *** [CMakeFiles/cmTC_67ed3.dir/CheckIncludeFile.c.o] Error 1
+        make: *** [cmTC_67ed3/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CheckIncludeFile.cmake:174 (try_compile)"
+      - "CMakeLists.txt:315 (check_include_file)"
+    checks:
+      - "Looking for linux/netlink.h"
+    directories:
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-02veIJ"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-02veIJ"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
+      CMAKE_OSX_ARCHITECTURES: "arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
+    buildResult:
+      variable: "HAVE_LINUX_NETLINK_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-02veIJ'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_20836/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_20836.dir/build.make CMakeFiles/cmTC_20836.dir/build
+        Building C object CMakeFiles/cmTC_20836.dir/CheckIncludeFile.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_20836.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_20836.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_20836.dir/CheckIncludeFile.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-02veIJ/CheckIncludeFile.c
+        /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-02veIJ/CheckIncludeFile.c:1:10: fatal error: 'linux/netlink.h' file not found
+            1 | #include <linux/netlink.h>
+              |          ^~~~~~~~~~~~~~~~~
+        1 error generated.
+        make[1]: *** [CMakeFiles/cmTC_20836.dir/CheckIncludeFile.c.o] Error 1
+        make: *** [cmTC_20836/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CheckIncludeFile.cmake:174 (try_compile)"
+      - "CMakeLists.txt:316 (check_include_file)"
+    checks:
+      - "Looking for linux/rtnetlink.h"
+    directories:
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-uHthcX"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-uHthcX"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
+      CMAKE_OSX_ARCHITECTURES: "arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
+    buildResult:
+      variable: "HAVE_LINUX_RTNETLINK_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-uHthcX'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_588cf/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_588cf.dir/build.make CMakeFiles/cmTC_588cf.dir/build
+        Building C object CMakeFiles/cmTC_588cf.dir/CheckIncludeFile.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_588cf.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_588cf.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_588cf.dir/CheckIncludeFile.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-uHthcX/CheckIncludeFile.c
+        /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-uHthcX/CheckIncludeFile.c:1:10: fatal error: 'linux/rtnetlink.h' file not found
+            1 | #include <linux/rtnetlink.h>
+              |          ^~~~~~~~~~~~~~~~~~~
+        1 error generated.
+        make[1]: *** [CMakeFiles/cmTC_588cf.dir/CheckIncludeFile.c.o] Error 1
+        make: *** [cmTC_588cf/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CheckIncludeFile.cmake:174 (try_compile)"
+      - "/opt/homebrew/share/cmake/Modules/CheckTypeSize.cmake:462 (check_include_file)"
+      - "CMakeLists.txt:321 (check_type_size)"
+    checks:
+      - "Looking for sys/types.h"
+    directories:
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-NWQydd"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-NWQydd"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
+      CMAKE_OSX_ARCHITECTURES: "arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
+    buildResult:
+      variable: "HAVE_SYS_TYPES_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-NWQydd'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_d599a/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_d599a.dir/build.make CMakeFiles/cmTC_d599a.dir/build
+        Building C object CMakeFiles/cmTC_d599a.dir/CheckIncludeFile.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_d599a.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_d599a.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_d599a.dir/CheckIncludeFile.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-NWQydd/CheckIncludeFile.c
+        Linking C executable cmTC_d599a.app/cmTC_d599a
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_d599a.dir/link.txt --verbose=1
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang  -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -Wl,-headerpad_max_install_names CMakeFiles/cmTC_d599a.dir/CheckIncludeFile.c.o -o cmTC_d599a.app/cmTC_d599a
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CheckIncludeFile.cmake:174 (try_compile)"
+      - "/opt/homebrew/share/cmake/Modules/CheckTypeSize.cmake:463 (check_include_file)"
+      - "CMakeLists.txt:321 (check_type_size)"
+    checks:
+      - "Looking for stdint.h"
+    directories:
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-VFK1gZ"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-VFK1gZ"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
+      CMAKE_OSX_ARCHITECTURES: "arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
+    buildResult:
+      variable: "HAVE_STDINT_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-VFK1gZ'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_bde7d/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_bde7d.dir/build.make CMakeFiles/cmTC_bde7d.dir/build
+        Building C object CMakeFiles/cmTC_bde7d.dir/CheckIncludeFile.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_bde7d.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_bde7d.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_bde7d.dir/CheckIncludeFile.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-VFK1gZ/CheckIncludeFile.c
+        Linking C executable cmTC_bde7d.app/cmTC_bde7d
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_bde7d.dir/link.txt --verbose=1
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang  -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -Wl,-headerpad_max_install_names CMakeFiles/cmTC_bde7d.dir/CheckIncludeFile.c.o -o cmTC_bde7d.app/cmTC_bde7d
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CheckIncludeFile.cmake:174 (try_compile)"
+      - "/opt/homebrew/share/cmake/Modules/CheckTypeSize.cmake:464 (check_include_file)"
+      - "CMakeLists.txt:321 (check_type_size)"
+    checks:
+      - "Looking for stddef.h"
+    directories:
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-llmtyF"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-llmtyF"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
+      CMAKE_OSX_ARCHITECTURES: "arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
+    buildResult:
+      variable: "HAVE_STDDEF_H"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-llmtyF'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_e3614/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_e3614.dir/build.make CMakeFiles/cmTC_e3614.dir/build
+        Building C object CMakeFiles/cmTC_e3614.dir/CheckIncludeFile.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_e3614.dir/CheckIncludeFile.c.o -MF CMakeFiles/cmTC_e3614.dir/CheckIncludeFile.c.o.d -o CMakeFiles/cmTC_e3614.dir/CheckIncludeFile.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-llmtyF/CheckIncludeFile.c
+        Linking C executable cmTC_e3614.app/cmTC_e3614
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e3614.dir/link.txt --verbose=1
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang  -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -Wl,-headerpad_max_install_names CMakeFiles/cmTC_e3614.dir/CheckIncludeFile.c.o -o cmTC_e3614.app/cmTC_e3614
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CheckTypeSize.cmake:348 (try_compile)"
+      - "/opt/homebrew/share/cmake/Modules/CheckTypeSize.cmake:481 (__check_type_size_impl)"
+      - "CMakeLists.txt:321 (check_type_size)"
+    checks:
+      - "Check size of ssize_t"
+    directories:
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-IxZGoQ"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-IxZGoQ"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
+      CMAKE_OSX_ARCHITECTURES: "arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
+    buildResult:
+      variable: "HAVE_SIZEOF_SSIZE_T"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-IxZGoQ'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_7e384/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_7e384.dir/build.make CMakeFiles/cmTC_7e384.dir/build
+        Building C object CMakeFiles/cmTC_7e384.dir/SIZEOF_SSIZE_T.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_7e384.dir/SIZEOF_SSIZE_T.c.o -MF CMakeFiles/cmTC_7e384.dir/SIZEOF_SSIZE_T.c.o.d -o CMakeFiles/cmTC_7e384.dir/SIZEOF_SSIZE_T.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-IxZGoQ/SIZEOF_SSIZE_T.c
+        Linking C executable cmTC_7e384.app/cmTC_7e384
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_7e384.dir/link.txt --verbose=1
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang  -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -Wl,-headerpad_max_install_names CMakeFiles/cmTC_7e384.dir/SIZEOF_SSIZE_T.c.o -o cmTC_7e384.app/cmTC_7e384
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CheckSymbolExists.cmake:193 (try_compile)"
+      - "/opt/homebrew/share/cmake/Modules/CheckSymbolExists.cmake:98 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:330 (check_symbol_exists)"
+    checks:
+      - "Looking for be64toh"
+    directories:
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-9WmJZd"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-9WmJZd"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
+      CMAKE_OSX_ARCHITECTURES: "arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
+    buildResult:
+      variable: "HAVE_DECL_BE64TOH"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-9WmJZd'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_0fcd7/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_0fcd7.dir/build.make CMakeFiles/cmTC_0fcd7.dir/build
+        Building C object CMakeFiles/cmTC_0fcd7.dir/CheckSymbolExists.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_0fcd7.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_0fcd7.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_0fcd7.dir/CheckSymbolExists.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-9WmJZd/CheckSymbolExists.c
+        /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-9WmJZd/CheckSymbolExists.c:8:19: error: use of undeclared identifier 'be64toh'
+            8 |   return ((int*)(&be64toh))[argc];
+              |                   ^
+        1 error generated.
+        make[1]: *** [CMakeFiles/cmTC_0fcd7.dir/CheckSymbolExists.c.o] Error 1
+        make: *** [cmTC_0fcd7/fast] Error 2
         
       exitCode: 2
   -
@@ -2390,36 +2729,107 @@ events:
     backtrace:
       - "/opt/homebrew/share/cmake/Modules/CheckSymbolExists.cmake:193 (try_compile)"
       - "/opt/homebrew/share/cmake/Modules/CheckSymbolExists.cmake:98 (__CHECK_SYMBOL_EXISTS_IMPL)"
-      - "CMakeLists.txt:177 (check_symbol_exists)"
+      - "CMakeLists.txt:336 (check_symbol_exists)"
     checks:
-      - "Looking for SSL_set_quic_tls_cbs"
+      - "Looking for bswap_64"
     directories:
-      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-QZmEc9"
-      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-QZmEc9"
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-cSwSVC"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-cSwSVC"
     cmakeVariables:
       CMAKE_C_FLAGS: ""
       CMAKE_C_FLAGS_DEBUG: "-g"
       CMAKE_EXE_LINKER_FLAGS: ""
-      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ngtcp2/cmake;"
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
       CMAKE_OSX_ARCHITECTURES: "arm64"
       CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
       CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
     buildResult:
-      variable: "HAVE_SSL_SET_QUIC_TLS_CBS"
+      variable: "HAVE_DECL_BSWAP_64"
       cached: true
       stdout: |
-        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-QZmEc9'
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-cSwSVC'
         
-        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_5b9cf/fast
-        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_5b9cf.dir/build.make CMakeFiles/cmTC_5b9cf.dir/build
-        Building C object CMakeFiles/cmTC_5b9cf.dir/CheckSymbolExists.c.o
-        /usr/bin/cc  -I/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/install/openssl-ios/include -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_5b9cf.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_5b9cf.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_5b9cf.dir/CheckSymbolExists.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-QZmEc9/CheckSymbolExists.c
-        /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-QZmEc9/CheckSymbolExists.c:2:10: fatal error: 'openssl/ssl.h' file not found
-            2 | #include <openssl/ssl.h>
-              |          ^~~~~~~~~~~~~~~
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_360af/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_360af.dir/build.make CMakeFiles/cmTC_360af.dir/build
+        Building C object CMakeFiles/cmTC_360af.dir/CheckSymbolExists.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_360af.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_360af.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_360af.dir/CheckSymbolExists.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-cSwSVC/CheckSymbolExists.c
+        /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-cSwSVC/CheckSymbolExists.c:2:10: fatal error: 'byteswap.h' file not found
+            2 | #include <byteswap.h>
+              |          ^~~~~~~~~~~~
         1 error generated.
-        make[1]: *** [CMakeFiles/cmTC_5b9cf.dir/CheckSymbolExists.c.o] Error 1
-        make: *** [cmTC_5b9cf/fast] Error 2
+        make[1]: *** [CMakeFiles/cmTC_360af.dir/CheckSymbolExists.c.o] Error 1
+        make: *** [cmTC_360af/fast] Error 2
         
       exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CheckSymbolExists.cmake:193 (try_compile)"
+      - "/opt/homebrew/share/cmake/Modules/CheckSymbolExists.cmake:98 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:337 (check_symbol_exists)"
+    checks:
+      - "Looking for explicit_bzero"
+    directories:
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-9IYbE3"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-9IYbE3"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
+      CMAKE_OSX_ARCHITECTURES: "arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
+    buildResult:
+      variable: "HAVE_EXPLICIT_BZERO"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-9IYbE3'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_15d8c/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_15d8c.dir/build.make CMakeFiles/cmTC_15d8c.dir/build
+        Building C object CMakeFiles/cmTC_15d8c.dir/CheckSymbolExists.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_15d8c.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_15d8c.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_15d8c.dir/CheckSymbolExists.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-9IYbE3/CheckSymbolExists.c
+        /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-9IYbE3/CheckSymbolExists.c:8:19: error: use of undeclared identifier 'explicit_bzero'
+            8 |   return ((int*)(&explicit_bzero))[argc];
+              |                   ^
+        1 error generated.
+        make[1]: *** [CMakeFiles/cmTC_15d8c.dir/CheckSymbolExists.c.o] Error 1
+        make: *** [cmTC_15d8c/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CheckSymbolExists.cmake:193 (try_compile)"
+      - "/opt/homebrew/share/cmake/Modules/CheckSymbolExists.cmake:98 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "CMakeLists.txt:338 (check_symbol_exists)"
+    checks:
+      - "Looking for memset_s"
+    directories:
+      source: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-YkIMHj"
+      binary: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-YkIMHj"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ref-code/ngtcp2/cmake;"
+      CMAKE_OSX_ARCHITECTURES: "arm64"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "15.0"
+      CMAKE_OSX_SYSROOT: "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk"
+    buildResult:
+      variable: "HAVE_MEMSET_S"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-YkIMHj'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_11eee/fast
+        /Applications/Xcode.app/Contents/Developer/usr/bin/make  -f CMakeFiles/cmTC_11eee.dir/build.make CMakeFiles/cmTC_11eee.dir/build
+        Building C object CMakeFiles/cmTC_11eee.dir/CheckSymbolExists.c.o
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang   -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -MD -MT CMakeFiles/cmTC_11eee.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_11eee.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_11eee.dir/CheckSymbolExists.c.o -c /Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic/ios/build/ios-arm64/CMakeFiles/CMakeScratch/TryCompile-YkIMHj/CheckSymbolExists.c
+        Linking C executable cmTC_11eee.app/cmTC_11eee
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_11eee.dir/link.txt --verbose=1
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang  -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -miphoneos-version-min=15.0 -Wl,-headerpad_max_install_names CMakeFiles/cmTC_11eee.dir/CheckSymbolExists.c.o -o cmTC_11eee.app/cmTC_11eee
+        
+      exitCode: 0
 ...

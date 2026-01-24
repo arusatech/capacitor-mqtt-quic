@@ -58,15 +58,19 @@ public final class MQTTClient {
             // Determine protocol version
             let useV5 = protocolVersion == .v5 || (protocolVersion == .auto)
             
-            // Build CONNACK stub (will be replaced with real response)
+            let quic: QuicClientProtocol
+            #if NGTCP2_ENABLED
+            quic = NGTCP2Client()
+            #else
+            // Build CONNACK stub (used when ngtcp2 is not linked)
             let connack: Data
             if useV5 {
                 connack = try MQTT5Protocol.buildConnackV5(reasonCode: .success, sessionPresent: false)
             } else {
                 connack = MQTTProtocol.buildConnack(returnCode: MQTTConnAckCode.accepted.rawValue)
             }
-            
-            let quic = QuicClientStub(initialReadData: connack)
+            quic = QuicClientStub(initialReadData: connack)
+            #endif
             try await quic.connect(host: host, port: port)
             let s = try await quic.openStream()
             let r = QUICStreamReader(stream: s)

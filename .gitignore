@@ -3,17 +3,24 @@ install/
 build/
 dist/
 ngtcp2/
+nghttp3/
 openssl/
 openssl-*/
 openssl-*.tar.gz
 ngtcp2-*/
 ngtcp2-*.tar.gz
+nghttp3-*/
+nghttp3-*.tar.gz
 node_modules/
+reference/
+reference-*/
+reference/**
 *.a
 *.so
 *.dylib
 *.framework
 *.xcframework
+.npmrc
 
 # iOS specific
 ios/install/

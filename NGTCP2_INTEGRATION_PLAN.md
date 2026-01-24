@@ -2,18 +2,19 @@
 
 ## Overview
 
-This document provides a detailed plan for integrating **ngtcp2** into the Capacitor MQTT-over-QUIC client plugin, replacing the current stub implementations with real QUIC transport.
+This document provides a detailed plan for integrating **ngtcp2** and **nghttp3** into the Capacitor MQTT-over-QUIC client plugin, replacing the current stub implementations with real QUIC transport.
 
 **Current Status:**
 - ✅ MQTT protocol layer (3.1.1 + 5.0) - Complete
 - ✅ Transport abstraction (StreamReader/StreamWriter) - Complete
 - ✅ MQTT client API - Complete
 - ✅ Capacitor plugin bridge - Complete
-- ⏳ **QUIC transport (ngtcp2)** - **PENDING** (currently using stubs)
+- ⏳ **QUIC transport (ngtcp2/nghttp3)** - **PENDING** (currently using stubs)
 
 **Reference:**
-- Server implementation: `MQTTD/mqttd/transport_quic_ngtcp2.py`
-- ngtcp2 source: `production/ngtcp2/`
+- Server implementation: `ref-code/mqttd/transport_quic_ngtcp2.py`
+- ngtcp2 source: `$PROJECT_DIR/ref-code/ngtcp2/`
+- nghttp3 source: `$PROJECT_DIR/ref-code/nghttp3/`
 - Client stubs: `ios/.../QuicClientStub.swift`, `android/.../QuicClientStub.kt`
 
 ---
@@ -38,7 +39,7 @@ This document provides a detailed plan for integrating **ngtcp2** into the Capac
 **Option A: Using CMake with iOS Toolchain (Recommended)**
 
 ```bash
-cd /home/annadata/api/production/ngtcp2
+cd ref-code/ngtcp2
 
 # Create iOS build directory
 mkdir -p build/ios
@@ -53,7 +54,7 @@ cmake ../.. \
   -DPLATFORM=OS64 \
   -DENABLE_LIB_ONLY=ON \
   -DENABLE_OPENSSL=ON \
-  -DOPENSSL_ROOT_DIR=/path/to/openssl/ios \
+  -DOPENSSL_ROOT_DIR=ref-code/openssl/build/ios/install \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX=./install
 
@@ -66,7 +67,7 @@ cmake --build . --config Release
 **Option B: Using Autotools with Cross-Compilation**
 
 ```bash
-cd /home/annadata/api/production/ngtcp2
+cd ref-code/ngtcp2
 
 # Set iOS SDK path
 export IOS_SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
@@ -76,9 +77,9 @@ export CXX=$(xcrun --sdk iphoneos --find clang++)
 # Configure for iOS
 ./configure \
   --host=arm-apple-darwin \
-  --prefix=/tmp/ngtcp2-ios \
+  --prefix=ref-code/ngtcp2/build/ios/install \
   --enable-lib-only \
-  --with-openssl=/path/to/openssl/ios \
+  --with-openssl=ref-code/openssl/build/ios/install \
   CC="$CC -arch arm64 -isysroot $IOS_SDK_PATH" \
   CXX="$CXX -arch arm64 -isysroot $IOS_SDK_PATH"
 
@@ -88,16 +89,20 @@ make install
 
 ### 1.3 Build OpenSSL for iOS
 
+**nghttp3 (HTTP/3 companion library):**
+- Build nghttp3 with the same iOS toolchain and install `libnghttp3.a` + headers.
+- Use `ios/build-nghttp3.sh` (or a similar CMake flow) to produce a static library for iOS.
+
 **Using OpenSSL:**
 
 ```bash
-# Clone OpenSSL
+# Clone OpenSSL (or quictls if using QUIC APIs)
 git clone https://github.com/openssl/openssl.git
-cd openssl
+cd ref-code/openssl
 
 # Configure for iOS
 ./Configure ios64-cross \
-  --prefix=/tmp/openssl-ios \
+  --prefix=ref-code/openssl/build/ios/install \
   no-shared \
   no-tests
 
@@ -151,8 +156,8 @@ let package = Package(
 **Option C: Manual Integration**
 
 1. Add `libngtcp2.a` to Xcode project
-2. Add header search paths: `$(SRCROOT)/../ngtcp2/lib/includes`
-3. Link against `libngtcp2.a` and OpenSSL
+2. Add header search paths: `$(SRCROOT)/../../ngtcp2/lib/includes` and `$(SRCROOT)/../../openssl/build/ios/install/include`
+3. Link against `libngtcp2.a`, `libssl.a`, and `libcrypto.a`
 
 ### 1.5 Create Swift Wrapper
 
@@ -210,7 +215,7 @@ public final class NGTCP2Client: QuicClientProtocol {
 
 ### 2.2 Build ngtcp2 with Android NDK
 
-**Create `android/ngtcp2/CMakeLists.txt`:**
+**Use `android/src/main/cpp/CMakeLists.txt`:**
 
 ```cmake
 cmake_minimum_required(VERSION 3.20)
@@ -224,8 +229,8 @@ set(CMAKE_ANDROID_NDK ${ANDROID_NDK})
 # Find OpenSSL (built for Android)
 find_package(OpenSSL REQUIRED)
 
-# Add ngtcp2 source files
-add_subdirectory(../../ngtcp2 libngtcp2)
+# Add ngtcp2 sources or installed libs from ref-code
+add_subdirectory(/Users/annadata/Project_A/annadata-production/ref-code/ngtcp2 libngtcp2)
 
 # Create shared library
 add_library(ngtcp2_client SHARED
@@ -240,30 +245,26 @@ target_link_libraries(ngtcp2_client
 )
 ```
 
-**Build script `android/ngtcp2/build.sh`:**
+**nghttp3 (HTTP/3 companion library):**
+- Build nghttp3 with the same NDK toolchain and link it alongside ngtcp2.
+- Use `android/build-nghttp3.sh` (or a similar CMake flow) to produce `libnghttp3.a`.
+
+**Build scripts:**
 
 ```bash
 #!/bin/bash
 set -e
 
-ANDROID_NDK=/path/to/android-ndk-r25c
-ANDROID_ABI=arm64-v8a
-ANDROID_PLATFORM=android-21
+cd android
 
-mkdir -p build/android
-cd build/android
+# Build nghttp3 (installs to android/install/nghttp3-android/<abi>/)
+./build-nghttp3.sh --abi arm64-v8a --platform android-21
 
-cmake ../.. \
-  -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake \
-  -DANDROID_ABI=$ANDROID_ABI \
-  -DANDROID_PLATFORM=$ANDROID_PLATFORM \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DENABLE_LIB_ONLY=ON \
-  -DENABLE_OPENSSL=ON
+# Build quictls OpenSSL (installs to android/install/openssl-android/<abi>/)
+./build-openssl.sh --abi arm64-v8a --platform android-21 --quictls
 
-cmake --build . --config Release
-
-# Output: libngtcp2_client.so
+# Build ngtcp2 (installs to android/install/ngtcp2-android/<abi>/)
+./build-ngtcp2.sh --abi arm64-v8a --platform android-21 --openssl-path ./install/openssl-android --quictls
 ```
 
 ### 2.3 Build OpenSSL for Android
@@ -271,13 +272,13 @@ cmake --build . --config Release
 **Using OpenSSL build script:**
 
 ```bash
-# Clone OpenSSL
+# Clone OpenSSL (or quictls if using QUIC APIs)
 git clone https://github.com/openssl/openssl.git
-cd openssl
+cd ref-code/openssl
 
 # Build for Android
 ./Configure android-arm64 \
-  --prefix=/tmp/openssl-android \
+  --prefix=ref-code/openssl/build/android/install \
   no-shared \
   no-tests
 
@@ -482,7 +483,43 @@ await MqttQuic.subscribe({
 - Document ngtcp2 integration
 - Add troubleshooting guide
 - Document TLS certificate requirements
+- Document bundled CA PEM usage and test harness
 
+#### TLS Certificate Verification (QUIC)
+
+QUIC requires TLS 1.3 and certificate verification is **enabled by default**.
+You can bundle a CA PEM and it will be loaded automatically:
+
+- iOS: `ios/Sources/MqttQuicPlugin/Resources/mqttquic_ca.pem`
+- Android: `android/src/main/assets/mqttquic_ca.pem`
+
+You can also override per call:
+
+```ts
+await MqttQuic.connect({
+  host: 'mqtt.example.com',
+  port: 1884,
+  clientId: 'my-client-id',
+  caFile: '/path/to/ca-bundle.pem',
+  // or caPath: '/path/to/ca-directory'
+});
+```
+
+#### Test Harness (QUIC Smoke Test)
+
+This runs: connect → subscribe → publish → disconnect.
+
+```ts
+await MqttQuic.testHarness({
+  host: 'mqtt.example.com',
+  port: 1884,
+  clientId: 'mqttquic_test_client',
+  topic: 'test/topic',
+  payload: 'Hello QUIC!',
+  // optional CA override
+  caFile: '/path/to/ca-bundle.pem'
+});
+```
 ### 5.2 CI/CD Integration
 
 - Add iOS build to CI (Xcode Cloud or GitHub Actions)
@@ -509,12 +546,12 @@ await MqttQuic.subscribe({
 ### ngtcp2 Documentation
 - Official: https://nghttp2.org/ngtcp2/
 - GitHub: https://github.com/ngtcp2/ngtcp2
-- Examples: `production/ngtcp2/examples/`
+- Examples: `ref-code/ngtcp2/examples/`
 
 ### Reference Implementations
 - Server: `MQTTD/mqttd/transport_quic_ngtcp2.py`
 - curl: `curl/lib/vquic/curl_ngtcp2.c`
-- ngtcp2 examples: `production/ngtcp2/examples/client.cc`
+- ngtcp2 examples: `ref-code/ngtcp2/examples/client.cc`
 
 ### Build Tools
 - iOS CMake toolchain: https://github.com/leetal/ios-cmake

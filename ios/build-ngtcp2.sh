@@ -19,8 +19,25 @@
 set -e
 
 # Default values
-NGTCP2_SOURCE_DIR="${NGTCP2_SOURCE_DIR:-../ngtcp2}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -z "$PROJECT_DIR" ] && [ -f "$SCRIPT_DIR/../package.json" ]; then
+    PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+fi
+if [ -n "$PROJECT_DIR" ]; then
+    REF_CODE_DIR="$(cd "$PROJECT_DIR/ref-code" && pwd)"
+else
+    if [ -d "$SCRIPT_DIR/../ref-code" ]; then
+        REF_CODE_DIR="$(cd "$SCRIPT_DIR/../ref-code" && pwd)"
+    else
+        REF_CODE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+    fi
+fi
+NGTCP2_SOURCE_DIR="${NGTCP2_SOURCE_DIR:-$REF_CODE_DIR/ngtcp2}"
+if [[ "$NGTCP2_SOURCE_DIR" != /* ]]; then
+    NGTCP2_SOURCE_DIR="$REF_CODE_DIR/$NGTCP2_SOURCE_DIR"
+fi
 OPENSSL_PATH="${OPENSSL_PATH:-}"
+USE_QUICTLS="${USE_QUICTLS:-0}"
 ARCH="${ARCH:-arm64}"
 SDK="${SDK:-iphoneos}"
 BUILD_TYPE="${BUILD_TYPE:-Release}"
@@ -32,6 +49,10 @@ while [[ $# -gt 0 ]]; do
         --openssl-path)
             OPENSSL_PATH="$2"
             shift 2
+            ;;
+        --quictls)
+            USE_QUICTLS=1
+            shift
             ;;
         --arch)
             ARCH="$2"
@@ -51,7 +72,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--openssl-path PATH] [--arch ARCH] [--sdk SDK]"
+            echo "Usage: $0 [--openssl-path PATH] [--arch ARCH] [--sdk SDK] [--quictls]"
             exit 1
             ;;
     esac
@@ -90,21 +111,48 @@ if [ ! -d "$NGTCP2_SOURCE_DIR" ]; then
     exit 1
 fi
 
+# Ensure required submodules are present (munit)
+if [ ! -f "$NGTCP2_SOURCE_DIR/munit/munit.c" ]; then
+    if [ -d "$NGTCP2_SOURCE_DIR/.git" ]; then
+        echo "Initializing ngtcp2 submodules..."
+        (cd "$NGTCP2_SOURCE_DIR" && git submodule update --init --recursive) || {
+            echo "Error: Failed to initialize ngtcp2 submodules"
+            exit 1
+        }
+    else
+        echo "Warning: ngtcp2 submodules are missing (munit)"
+        echo "Tests will be disabled, but if configuration still fails, clone with submodules:"
+        echo "  git clone --recurse-submodules https://github.com/ngtcp2/ngtcp2.git $NGTCP2_SOURCE_DIR"
+    fi
+fi
+
 # Check OpenSSL
 if [ -z "$OPENSSL_PATH" ]; then
-    echo "Warning: OpenSSL path not specified. ngtcp2 will be built without TLS support."
-    echo "To build with OpenSSL, use: --openssl-path /path/to/openssl-ios"
-    echo ""
-    echo "You can build OpenSSL for iOS using:"
-    echo "  git clone https://github.com/openssl/openssl.git"
-    echo "  cd openssl"
-    echo "  ./Configure ios64-cross --prefix=/tmp/openssl-ios no-shared no-tests"
-    echo "  make -j\$(sysctl -n hw.ncpu)"
-    echo "  make install"
-    exit 1
+    if [ -d "$SCRIPT_DIR/install/openssl-ios" ]; then
+        OPENSSL_PATH="$SCRIPT_DIR/install/openssl-ios"
+    else
+        echo "Warning: OpenSSL path not specified. ngtcp2 will be built without TLS support."
+        echo "To build with OpenSSL, use: --openssl-path /path/to/openssl-ios"
+        echo ""
+        echo "You can build OpenSSL for iOS using:"
+        echo "  git clone https://github.com/openssl/openssl.git"
+        echo "  cd openssl"
+        echo "  ./Configure ios64-cross --prefix=/tmp/openssl-ios no-shared no-tests"
+        echo "  make -j\$(sysctl -n hw.ncpu)"
+        echo "  make install"
+        exit 1
+    fi
 fi
 
 # Verify OpenSSL installation
+if [[ "$OPENSSL_PATH" != /* ]]; then
+    if [ -d "$SCRIPT_DIR/$OPENSSL_PATH" ]; then
+        OPENSSL_PATH="$SCRIPT_DIR/$OPENSSL_PATH"
+    elif [ -d "$REF_CODE_DIR/$OPENSSL_PATH" ]; then
+        OPENSSL_PATH="$REF_CODE_DIR/$OPENSSL_PATH"
+    fi
+fi
+
 if [ ! -d "$OPENSSL_PATH" ]; then
     echo "Error: OpenSSL path does not exist: $OPENSSL_PATH"
     exit 1
@@ -134,6 +182,14 @@ if [ ! -d "$OPENSSL_INCLUDE_DIR" ]; then
     exit 1
 fi
 
+if [ "$USE_QUICTLS" = "1" ]; then
+    if ! grep -q "SSL_provide_quic_data" "$OPENSSL_INCLUDE_DIR/openssl/ssl.h" 2>/dev/null; then
+        echo "Error: OpenSSL headers at $OPENSSL_INCLUDE_DIR do not include QUIC APIs."
+        echo "Rebuild OpenSSL with --quictls and ensure OPENSSL_SOURCE_DIR points to quictls."
+        exit 1
+    fi
+fi
+
 echo "  OpenSSL Path: $OPENSSL_PATH"
 echo "  OpenSSL Libraries: $OPENSSL_LIB_DIR"
 echo "  OpenSSL Headers: $OPENSSL_INCLUDE_DIR"
@@ -141,6 +197,17 @@ echo "  OpenSSL Headers: $OPENSSL_INCLUDE_DIR"
 # Create build directory
 BUILD_DIR="build/ios-$ARCH"
 mkdir -p "$BUILD_DIR"
+
+# Clean build dir if CMake cache points to a different source tree
+if [ -f "$BUILD_DIR/CMakeCache.txt" ]; then
+    CMAKE_HOME_DIR=$(grep "^CMAKE_HOME_DIRECTORY:INTERNAL=" "$BUILD_DIR/CMakeCache.txt" | cut -d= -f2-)
+    if [ -n "$CMAKE_HOME_DIR" ] && [ "$CMAKE_HOME_DIR" != "$NGTCP2_SOURCE_DIR" ]; then
+        echo "CMake cache source mismatch. Cleaning $BUILD_DIR"
+        rm -rf "$BUILD_DIR"
+        mkdir -p "$BUILD_DIR"
+    fi
+fi
+
 cd "$BUILD_DIR"
 
 # Configure CMake
@@ -152,6 +219,8 @@ CMAKE_ARGS=(
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
     -DENABLE_LIB_ONLY=ON
     -DCMAKE_INSTALL_PREFIX="$(pwd)/install"
+    -DENABLE_TESTS=OFF
+    -DENABLE_EXAMPLES=OFF
 )
 
 if [ -n "$OPENSSL_PATH" ]; then
@@ -164,6 +233,12 @@ if [ -n "$OPENSSL_PATH" ]; then
         -DOPENSSL_INCLUDE_DIR="$OPENSSL_INCLUDE_DIR"
         -DOPENSSL_LIBRARIES="$OPENSSL_SSL_LIB;$OPENSSL_CRYPTO_LIB"
     )
+
+    if [ "$USE_QUICTLS" = "1" ]; then
+        CMAKE_ARGS+=(
+            -DENABLE_QUICTLS=ON
+        )
+    fi
 else
     CMAKE_ARGS+=(
         -DENABLE_OPENSSL=OFF
@@ -181,6 +256,21 @@ cmake --build . --config "$BUILD_TYPE" -j$(sysctl -n hw.ncpu)
 echo ""
 echo "Installing..."
 cmake --install .
+
+echo ""
+echo "Syncing artifacts to ios/libs and ios/include..."
+LIBS_DIR="$SCRIPT_DIR/libs"
+INCLUDE_DIR="$SCRIPT_DIR/include"
+mkdir -p "$LIBS_DIR" "$INCLUDE_DIR"
+cp "$(pwd)/install/lib/libngtcp2.a" "$LIBS_DIR/"
+for crypto_lib in "$(pwd)/install/lib"/libngtcp2_crypto_*.a; do
+    if [ -f "$crypto_lib" ]; then
+        cp "$crypto_lib" "$LIBS_DIR/"
+    fi
+done
+if [ -d "$(pwd)/install/include/ngtcp2" ]; then
+    cp -R "$(pwd)/install/include/ngtcp2" "$INCLUDE_DIR/"
+fi
 
 echo ""
 echo "Build complete!"
