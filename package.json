@@ -1,6 +1,6 @@
 {
   "name": "@annadata/capacitor-mqtt-quic",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "MQTT-over-QUIC client for Capacitor (iOS/Android). Uses ngtcp2 for QUIC; MQTT over WebSocket fallback on web.",
   "main": "dist/plugin.cjs.js",
@@ -10,14 +10,18 @@
   "files": [
     "dist",
     "ios",
-    "android"
+    "android",
+    "README.md"
   ],
   "scripts": {
     "build": "npm run build:tsc && npm run build:rollup",
     "build:tsc": "tsc",
     "build:rollup": "rollup -c rollup.config.js",
     "watch": "rollup -c rollup.config.js -w",
-    "lint": "eslint src --ext ts"
+    "lint": "eslint src --ext ts",
+    "prepack": "npm run clean:build-artifacts",
+    "prepublishOnly": "npm run build && npm run clean:build-artifacts",
+    "clean:build-artifacts": "node -e \"const fs=require('fs'),path=require('path');['android/build','android/install','android/.gradle','ios/build','ios/install'].forEach(d=>{const p=path.join(__dirname,d);if(fs.existsSync(p)){console.log('Removing:',p);require('child_process').execSync('rm -rf '+p,{stdio:'inherit'})}})\""
   },
   "keywords": [
     "capacitor",

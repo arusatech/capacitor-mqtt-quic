@@ -3,6 +3,7 @@ import type {
   MqttQuicConnectOptions,
   MqttQuicPublishOptions,
   MqttQuicSubscribeOptions,
+  MqttQuicTestHarnessOptions,
 } from './definitions';
 
 /**
@@ -161,5 +162,29 @@ export class MqttQuicWeb {
         else resolve({ success: true });
       });
     });
+  }
+
+  async testHarness(options: MqttQuicTestHarnessOptions): Promise<{ success: boolean }> {
+    const host = options.host;
+    const port = options.port ?? 1884;
+    const clientId = options.clientId ?? 'mqttquic_test_client';
+    const topic = options.topic ?? 'test/topic';
+    const payload = options.payload ?? 'Hello QUIC!';
+
+    try {
+      await this.connect({
+        host,
+        port,
+        clientId,
+        cleanSession: true,
+        keepalive: 60,
+      });
+      await this.subscribe({ topic, qos: 0 });
+      await this.publish({ topic, payload, qos: 0 });
+      await this.disconnect();
+      return { success: true };
+    } catch (error) {
+      throw error instanceof Error ? error : new Error(String(error));
+    }
   }
 }

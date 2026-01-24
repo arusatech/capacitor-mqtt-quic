@@ -300,16 +300,38 @@ interface MqttQuicTestHarnessOptions {
 
 ## ngtcp2 Build (Phase 2) ⏳
 
-**Current Status:** Using stub implementations for development/testing. Real QUIC transport pending.
+**Current Status:** Real QUIC transport implemented using ngtcp2 + quictls (OpenSSL fork).
 
-To enable real QUIC (replace stub):
+### Quick Build (Recommended)
 
-1. **iOS**: Build ngtcp2 + OpenSSL/BoringSSL as static libs; add to Xcode. Use CMake with an iOS toolchain or vendored source. Pin ngtcp2 ≥ 1.21.
-2. **Android**: Build ngtcp2 with NDK (CMake), produce `libngtcp2_client.so`. Link same TLS lib. See `android/quic/` for JNI wrapper layout.
+Use the unified build script to build all native dependencies:
 
-**UDP:** iOS `NWConnection`, Android `DatagramSocket`. TLS 1.3 is required for QUIC.
+```bash
+# Build for both iOS and Android
+./build-native.sh
 
-**See:** [NGTCP2_INTEGRATION_PLAN.md](./NGTCP2_INTEGRATION_PLAN.md) for detailed build instructions.
+# Build only iOS
+./build-native.sh --ios-only
+
+# Build only Android
+./build-native.sh --android-only
+
+# Build for specific Android ABI
+./build-native.sh --android-only --abi arm64-v8a
+```
+
+This script builds OpenSSL (quictls) → nghttp3 → ngtcp2 in the correct order for both platforms.
+
+### Manual Build
+
+For detailed manual build instructions, see:
+- **iOS**: [ios/NGTCP2_BUILD_INSTRUCTIONS.md](./ios/NGTCP2_BUILD_INSTRUCTIONS.md)
+- **Android**: [android/NGTCP2_BUILD_INSTRUCTIONS.md](./android/NGTCP2_BUILD_INSTRUCTIONS.md)
+- **Full Plan**: [NGTCP2_INTEGRATION_PLAN.md](./NGTCP2_INTEGRATION_PLAN.md)
+
+**Prerequisites:**
+- iOS: macOS with Xcode 14+
+- Android: Android Studio with NDK r25+ (auto-detected from `$ANDROID_HOME`)
 
 ## Development
 
