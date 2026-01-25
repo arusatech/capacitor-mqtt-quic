@@ -839,7 +839,7 @@ Java_ai_annadata_mqttquic_quic_NGTCP2Client_nativeOpenStream(
   std::lock_guard<std::mutex> lock(connections_mutex);
   auto it = connections.find(connHandle);
   if (it == connections.end()) {
-    return 0;
+    return -1;  // Return -1 on error (0 is a valid stream ID)
   }
   return it->second->open_stream();
 }
