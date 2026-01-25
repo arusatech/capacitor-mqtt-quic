@@ -1,11 +1,11 @@
 # Build artifacts - exclude entire directories recursively
 # Note: npm .npmignore patterns work relative to package root
+# Note: dist/ is NOT excluded here because it's in package.json "files" and must be included
 build/
 install/
 .gradle/
 libs/
 include/
-dist/
 
 # Platform-specific build artifacts (explicit paths)
 android/build/
@@ -114,7 +114,5 @@ MQTT5_IMPLEMENTATION_COMPLETE.md
 android/NGTCP2_BUILD_INSTRUCTIONS.md
 ios/NGTCP2_BUILD_INSTRUCTIONS.md
 
-# Keep these (explicitly included in package.json files field)
-!ios/
-!android/
-!dist/
+# Note: dist/, ios/, and android/ are explicitly included in package.json "files" field
+# No need for negation patterns here - they're already whitelisted
