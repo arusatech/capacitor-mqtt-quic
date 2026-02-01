@@ -36,6 +36,10 @@ NGTCP2_SOURCE_DIR="${NGTCP2_SOURCE_DIR:-$REF_CODE_DIR/ngtcp2}"
 if [[ "$NGTCP2_SOURCE_DIR" != /* ]]; then
     NGTCP2_SOURCE_DIR="$REF_CODE_DIR/$NGTCP2_SOURCE_DIR"
 fi
+# If default path does not exist, try sibling ref-code/ngtcp2 (e.g. when plugin has ref-code/ but ngtcp2 lives in repo ref-code/)
+if [ -n "$PROJECT_DIR" ] && [ ! -d "$NGTCP2_SOURCE_DIR" ] && [ -d "$(cd "$PROJECT_DIR/.." && pwd)/ngtcp2" ]; then
+    NGTCP2_SOURCE_DIR="$(cd "$PROJECT_DIR/../ngtcp2" && pwd)"
+fi
 OPENSSL_PATH="${OPENSSL_PATH:-}"
 USE_QUICTLS="${USE_QUICTLS:-0}"
 ARCH="${ARCH:-arm64}"
@@ -111,8 +115,8 @@ if [ ! -d "$NGTCP2_SOURCE_DIR" ]; then
     exit 1
 fi
 
-# Ensure required submodules are present (munit)
-if [ ! -f "$NGTCP2_SOURCE_DIR/munit/munit.c" ]; then
+# Ensure required sources are present (munit: top-level or tests/munit)
+if [ ! -f "$NGTCP2_SOURCE_DIR/munit/munit.c" ] && [ ! -f "$NGTCP2_SOURCE_DIR/tests/munit/munit.c" ]; then
     if [ -d "$NGTCP2_SOURCE_DIR/.git" ]; then
         echo "Initializing ngtcp2 submodules..."
         (cd "$NGTCP2_SOURCE_DIR" && git submodule update --init --recursive) || {

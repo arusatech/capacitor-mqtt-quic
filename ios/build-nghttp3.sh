@@ -23,7 +23,12 @@ if [ -z "$PROJECT_DIR" ] && [ -f "$SCRIPT_DIR/../package.json" ]; then
     PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 fi
 if [ -n "$PROJECT_DIR" ]; then
-    REF_CODE_DIR="$(cd "$PROJECT_DIR/ref-code" && pwd)"
+    if [ -d "$PROJECT_DIR/ref-code" ]; then
+        REF_CODE_DIR="$(cd "$PROJECT_DIR/ref-code" && pwd)"
+    else
+        # Plugin run from repo: use parent as ref-code (e.g. ref-code/capacitor-mqtt-quic -> ref-code)
+        REF_CODE_DIR="$(cd "$PROJECT_DIR/.." && pwd)"
+    fi
 else
     if [ -d "$SCRIPT_DIR/../ref-code" ]; then
         REF_CODE_DIR="$(cd "$SCRIPT_DIR/../ref-code" && pwd)"
@@ -34,6 +39,10 @@ fi
 NGHTTP3_SOURCE_DIR="${NGHTTP3_SOURCE_DIR:-$REF_CODE_DIR/nghttp3}"
 if [[ "$NGHTTP3_SOURCE_DIR" != /* ]]; then
     NGHTTP3_SOURCE_DIR="$REF_CODE_DIR/$NGHTTP3_SOURCE_DIR"
+fi
+# If default path does not exist, try sibling ref-code/nghttp3 (e.g. when plugin has ref-code/ but nghttp3 lives in repo ref-code/)
+if [ -n "$PROJECT_DIR" ] && [ ! -d "$NGHTTP3_SOURCE_DIR" ] && [ -d "$(cd "$PROJECT_DIR/.." && pwd)/nghttp3" ]; then
+    NGHTTP3_SOURCE_DIR="$(cd "$PROJECT_DIR/../nghttp3" && pwd)"
 fi
 ARCH="${ARCH:-arm64}"
 SDK="${SDK:-iphoneos}"
@@ -100,8 +109,8 @@ if [ ! -d "$NGHTTP3_SOURCE_DIR" ]; then
     exit 1
 fi
 
-# Ensure required submodules are present (sfparse, munit)
-if [ ! -f "$NGHTTP3_SOURCE_DIR/sfparse/sfparse.c" ] || [ ! -f "$NGHTTP3_SOURCE_DIR/munit/munit.c" ]; then
+# Ensure required sources are present (sfparse: top-level or lib/sfparse)
+if [ ! -f "$NGHTTP3_SOURCE_DIR/sfparse/sfparse.c" ] && [ ! -f "$NGHTTP3_SOURCE_DIR/lib/sfparse/sfparse.c" ]; then
     if [ -d "$NGHTTP3_SOURCE_DIR/.git" ]; then
         echo "Initializing nghttp3 submodules..."
         (cd "$NGHTTP3_SOURCE_DIR" && git submodule update --init --recursive) || {
@@ -109,7 +118,7 @@ if [ ! -f "$NGHTTP3_SOURCE_DIR/sfparse/sfparse.c" ] || [ ! -f "$NGHTTP3_SOURCE_D
             exit 1
         }
     else
-        echo "Error: nghttp3 submodules are missing (sfparse/munit)"
+        echo "Error: nghttp3 submodules are missing (sfparse)"
         echo "Please clone with submodules:"
         echo "  git clone --recurse-submodules https://github.com/ngtcp2/nghttp3.git $NGHTTP3_SOURCE_DIR"
         echo "Or if already cloned:"
