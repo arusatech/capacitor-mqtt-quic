@@ -2,6 +2,7 @@
 install/
 build/
 dist/
+ref-code/
 ngtcp2/
 nghttp3/
 openssl/
