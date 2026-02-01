@@ -22,6 +22,7 @@ apply plugin: 'org.jetbrains.kotlin.android'
 android {
     namespace "ai.annadata.mqttquic"
     compileSdk project.hasProperty('compileSdkVersion') ? rootProject.ext.compileSdkVersion : 35
+    ndkVersion "26.1.10909125"
     defaultConfig {
         minSdk project.hasProperty('minSdkVersion') ? rootProject.ext.minSdkVersion : 23
         targetSdk project.hasProperty('targetSdkVersion') ? rootProject.ext.targetSdkVersion : 35
