@@ -71,7 +71,7 @@ public final class MQTT5PropertyEncoder {
             
             switch propId {
             case MQTT5PropertyType.payloadFormatIndicator.rawValue:
-                result.append((value as? Int ?? 0) & 0xFF)
+                result.append(UInt8((value as? Int ?? 0) & 0xFF))
                 
             case MQTT5PropertyType.messageExpiryInterval.rawValue,
                  MQTT5PropertyType.sessionExpiryInterval.rawValue,
@@ -117,7 +117,7 @@ public final class MQTT5PropertyEncoder {
                  MQTT5PropertyType.wildcardSubscriptionAvailable.rawValue,
                  MQTT5PropertyType.subscriptionIdentifierAvailable.rawValue,
                  MQTT5PropertyType.sharedSubscriptionAvailable.rawValue:
-                result.append((value as? Int ?? 0) & 0xFF)
+                result.append(UInt8((value as? Int ?? 0) & 0xFF))
                 
             case MQTT5PropertyType.userProperty.rawValue:
                 if let pair = value as? (String, String) {

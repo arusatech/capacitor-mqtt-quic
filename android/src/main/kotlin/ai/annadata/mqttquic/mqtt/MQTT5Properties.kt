@@ -58,7 +58,7 @@ object MQTT5PropertyEncoder {
             
             when (propId) {
                 MQTT5PropertyType.PAYLOAD_FORMAT_INDICATOR.toInt() -> {
-                    result.add(((value as? Int) ?: 0).toByte())
+                    result.add((((value as? Int) ?: 0) and 0xFF).toByte())
                 }
                 MQTT5PropertyType.MESSAGE_EXPIRY_INTERVAL.toInt(),
                 MQTT5PropertyType.SESSION_EXPIRY_INTERVAL.toInt(),
@@ -104,7 +104,7 @@ object MQTT5PropertyEncoder {
                 MQTT5PropertyType.WILDCARD_SUBSCRIPTION_AVAILABLE.toInt(),
                 MQTT5PropertyType.SUBSCRIPTION_IDENTIFIER_AVAILABLE.toInt(),
                 MQTT5PropertyType.SHARED_SUBSCRIPTION_AVAILABLE.toInt() -> {
-                    result.add(((value as? Int) ?: 0).toByte())
+                    result.add((((value as? Int) ?: 0) and 0xFF).toByte())
                 }
                 MQTT5PropertyType.USER_PROPERTY.toInt() -> {
                     if (value is Pair<*, *>) {

@@ -11,6 +11,17 @@ import Capacitor
 @objc(MqttQuicPlugin)
 public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
 
+    public let identifier = "MqttQuicPlugin"
+    public let jsName = "MqttQuic"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "connect", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "disconnect", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "publish", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "subscribe", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "unsubscribe", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "testHarness", returnType: CAPPluginReturnPromise)
+    ]
+
     private var client = MQTTClient(protocolVersion: .auto)
 
     @objc override public func load() {}

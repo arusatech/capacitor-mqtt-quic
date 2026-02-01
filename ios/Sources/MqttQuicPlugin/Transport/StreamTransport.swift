@@ -46,6 +46,10 @@ public final class MockStreamBuffer {
         return Data(out)
     }
 
+    public func appendWrite(_ data: Data) {
+        writeBuffer.append(data)
+    }
+
     public func consumeWrite() -> Data {
         let d = writeBuffer
         writeBuffer = Data()
@@ -94,7 +98,7 @@ public final class MockStreamWriter: MQTTStreamWriterProtocol {
     }
 
     public func write(_ data: Data) async throws {
-        buffer.writeBuffer.append(data)
+        buffer.appendWrite(data)
     }
 
     public func drain() async throws {}

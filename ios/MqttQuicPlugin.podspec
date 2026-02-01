@@ -12,7 +12,7 @@ Pod::Spec.new do |s|
   s.source = { :git => 'https://github.com/annadata/capacitor-mqtt-quic', :tag => s.version.to_s }
   s.source_files = 'Sources/**/*.{swift,h,m,c,cc,mm,cpp}'
   s.resources = ['Sources/MqttQuicPlugin/Resources/*.pem']
-  s.ios.deployment_target = '15.0'
+  s.ios.deployment_target = '14.0'
   s.dependency 'Capacitor'
   s.swift_version = '5.1'
   s.vendored_libraries = [
