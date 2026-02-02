@@ -14,7 +14,7 @@ Pod::Spec.new do |s|
   # Exclude ngtcp2 native impl when using QuicClientStub. Remove when NGTCP2 bridge is fixed.
   s.exclude_files = 'ios/Sources/MqttQuicPlugin/QUIC/NGTCP2Client.swift', 'ios/Sources/MqttQuicPlugin/QUIC/NGTCP2Bridge.mm', 'ios/Sources/MqttQuicPlugin/QUIC/NGTCP2Bridge.h'
   s.resources = ['ios/Sources/MqttQuicPlugin/Resources/*.pem']
-  s.ios.deployment_target = '14.0'
+  s.ios.deployment_target = '15.0'
   s.dependency 'Capacitor'
   s.swift_version = '5.1'
   s.vendored_libraries = [

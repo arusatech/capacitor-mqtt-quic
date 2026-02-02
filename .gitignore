@@ -2,6 +2,8 @@
 install/
 build/
 dist/
+# Cloned dependency sources (openssl/quictls, nghttp3, ngtcp2) - created by build scripts
+deps/
 ref-code/
 ngtcp2/
 nghttp3/

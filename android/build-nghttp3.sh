@@ -16,17 +16,16 @@
 
 set -e
 
-# Default values
+# Default values: PROJECT_DIR = plugin root (where build-native.sh lives)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -z "$PROJECT_DIR" ]; then
+    PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+fi
+DEPS_DIR="${PROJECT_DIR}/deps"
 ANDROID_NDK="${ANDROID_NDK:-}"
 ANDROID_ABI="${ANDROID_ABI:-arm64-v8a}"
 ANDROID_PLATFORM="${ANDROID_PLATFORM:-android-21}"
 BUILD_TYPE="${BUILD_TYPE:-Release}"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-if [ -n "$PROJECT_DIR" ]; then
-    REF_CODE_DIR="$(cd "$PROJECT_DIR/ref-code" && pwd)"
-else
-    REF_CODE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-fi
 INSTALL_PREFIX="${INSTALL_PREFIX:-$SCRIPT_DIR/install/nghttp3-android}"
 
 # Parse arguments
@@ -101,23 +100,19 @@ if [[ "$INSTALL_PREFIX" != *"/$ANDROID_ABI" ]]; then
 fi
 echo "  Install Prefix: $INSTALL_PREFIX"
 
-# Check if nghttp3 source exists
-if [ -n "$NGHTTP3_SOURCE_DIR" ]; then
-    if [[ "$NGHTTP3_SOURCE_DIR" != /* ]]; then
-        NGHTTP3_SOURCE_DIR="$REF_CODE_DIR/$NGHTTP3_SOURCE_DIR"
-    fi
-else
-    NGHTTP3_SOURCE_DIR="$REF_CODE_DIR/nghttp3"
+# Resolve nghttp3 source dir (default: deps/nghttp3)
+NGHTTP3_SOURCE_DIR="${NGHTTP3_SOURCE_DIR:-${DEPS_DIR}/nghttp3}"
+if [[ "$NGHTTP3_SOURCE_DIR" != /* ]]; then
+    NGHTTP3_SOURCE_DIR="${DEPS_DIR}/$NGHTTP3_SOURCE_DIR"
 fi
-if [ ! -d "$NGHTTP3_SOURCE_DIR" ] && [ -d "$REF_CODE_DIR/nghttp3" ]; then
-    echo "Warning: NGHTTP3_SOURCE_DIR not found; using $REF_CODE_DIR/nghttp3"
-    NGHTTP3_SOURCE_DIR="$REF_CODE_DIR/nghttp3"
-fi
+# Clone nghttp3 if missing
 if [ ! -d "$NGHTTP3_SOURCE_DIR" ]; then
-    echo "Error: nghttp3 source directory not found: $NGHTTP3_SOURCE_DIR"
-    echo "Please set NGHTTP3_SOURCE_DIR environment variable or clone nghttp3:"
-    echo "  git clone --recurse-submodules https://github.com/ngtcp2/nghttp3.git $NGHTTP3_SOURCE_DIR"
-    exit 1
+    echo "nghttp3 source not found. Cloning into $NGHTTP3_SOURCE_DIR ..."
+    mkdir -p "$DEPS_DIR"
+    git clone --recurse-submodules https://github.com/ngtcp2/nghttp3.git "$NGHTTP3_SOURCE_DIR" || {
+        echo "Error: Failed to clone nghttp3"
+        exit 1
+    }
 fi
 
 # Ensure required submodules are present (sfparse, munit)

@@ -17,21 +17,18 @@
 
 set -e
 
-# Default values
+# Default values: PROJECT_DIR = plugin root (where build-native.sh lives)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -z "$PROJECT_DIR" ]; then
+    PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+fi
+DEPS_DIR="${PROJECT_DIR}/deps"
 ANDROID_NDK="${ANDROID_NDK:-}"
 ANDROID_ABI="${ANDROID_ABI:-arm64-v8a}"
 ANDROID_PLATFORM="${ANDROID_PLATFORM:-android-21}"
 BUILD_TYPE="${BUILD_TYPE:-Release}"
 OPENSSL_PATH="${OPENSSL_PATH:-}"
 USE_QUICTLS="${USE_QUICTLS:-0}"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-if [ -n "$PROJECT_DIR" ]; then
-    # PROJECT_DIR is the capacitor-mqtt-quic repo root
-    REF_CODE_DIR="$(cd "$PROJECT_DIR/ref-code" && pwd)"
-else
-    # Fallback: repo root is one level above android/
-    REF_CODE_DIR="$(cd "$SCRIPT_DIR/../ref-code" && pwd)"
-fi
 INSTALL_PREFIX="${INSTALL_PREFIX:-$SCRIPT_DIR/install/ngtcp2-android}"
 
 # Parse arguments
@@ -117,23 +114,19 @@ if [[ "$INSTALL_PREFIX" != *"/$ANDROID_ABI" ]]; then
 fi
 echo "  Install Prefix: $INSTALL_PREFIX"
 
-# Check if ngtcp2 source exists
-if [ -n "$NGTCP2_SOURCE_DIR" ]; then
-    if [[ "$NGTCP2_SOURCE_DIR" != /* ]]; then
-        NGTCP2_SOURCE_DIR="$REF_CODE_DIR/$NGTCP2_SOURCE_DIR"
-    fi
-else
-    NGTCP2_SOURCE_DIR="$REF_CODE_DIR/ngtcp2"
+# Resolve ngtcp2 source dir (default: deps/ngtcp2)
+NGTCP2_SOURCE_DIR="${NGTCP2_SOURCE_DIR:-${DEPS_DIR}/ngtcp2}"
+if [[ "$NGTCP2_SOURCE_DIR" != /* ]]; then
+    NGTCP2_SOURCE_DIR="${DEPS_DIR}/$NGTCP2_SOURCE_DIR"
 fi
-if [ ! -d "$NGTCP2_SOURCE_DIR" ] && [ -d "$REF_CODE_DIR/ngtcp2" ]; then
-    echo "Warning: NGTCP2_SOURCE_DIR not found; using $REF_CODE_DIR/ngtcp2"
-    NGTCP2_SOURCE_DIR="$REF_CODE_DIR/ngtcp2"
-fi
+# Clone ngtcp2 if missing
 if [ ! -d "$NGTCP2_SOURCE_DIR" ]; then
-    echo "Error: ngtcp2 source directory not found: $NGTCP2_SOURCE_DIR"
-    echo "Please set NGTCP2_SOURCE_DIR environment variable or clone ngtcp2:"
-    echo "  git clone https://github.com/ngtcp2/ngtcp2.git $NGTCP2_SOURCE_DIR"
-    exit 1
+    echo "ngtcp2 source not found. Cloning into $NGTCP2_SOURCE_DIR ..."
+    mkdir -p "$DEPS_DIR"
+    git clone --recurse-submodules https://github.com/ngtcp2/ngtcp2.git "$NGTCP2_SOURCE_DIR" || {
+        echo "Error: Failed to clone ngtcp2"
+        exit 1
+    }
 fi
 
 # Ensure required submodules are present (munit)
@@ -192,7 +185,7 @@ if [ -n "$OPENSSL_PATH" ]; then
         if [ -d "$SCRIPT_DIR/$OPENSSL_PATH" ]; then
             OPENSSL_PATH="$SCRIPT_DIR/$OPENSSL_PATH"
         else
-            OPENSSL_PATH="$REF_CODE_DIR/$OPENSSL_PATH"
+            OPENSSL_PATH="$DEPS_DIR/$OPENSSL_PATH"
         fi
     fi
     # If ABI-aware install exists, prefer it

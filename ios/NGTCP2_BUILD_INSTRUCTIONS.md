@@ -119,9 +119,22 @@ lipo -create \
   -output libs/libngtcp2_crypto_quictls-universal.a
 ```
 
+## Swift Package Manager (SPM) – create xcframework
+
+If the app uses **Swift Package Manager** (Capacitor 8 SPM flow), the plugin’s `Package.swift` expects `Libs/MqttQuicLibs.xcframework`. After building OpenSSL, ngtcp2, and nghttp3 (Steps 1–3 above) so that `ios/libs/` contains the five `.a` files, run:
+
+```bash
+cd ios
+./create-xcframework.sh
+```
+
+This merges `libs/*.a` into a single static library and creates `Libs/MqttQuicLibs.xcframework`. The app can then resolve the MqttQuicPlugin package and link the native plugin. Without this step, SPM will fail to resolve the plugin (binary target missing).
+
+---
+
 ## Integration into Xcode Project
 
-### Option A: CocoaPods (Recommended)
+### Option A: CocoaPods
 
 Update `ios/MqttQuicPlugin.podspec`:
 

@@ -238,9 +238,7 @@ public final class MQTT5Protocol {
         
         var reasonCodes: [MQTT5ReasonCode] = []
         while pos < data.count {
-            if let rc = MQTT5ReasonCode(rawValue: data[pos]) {
-                reasonCodes.append(rc)
-            }
+            reasonCodes.append(MQTT5ReasonCode(rawValue: data[pos]))
             pos += 1
         }
         

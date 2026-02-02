@@ -16,32 +16,18 @@
 
 set -e
 
-# Default values
+# Default values: PROJECT_DIR = plugin root (where build-native.sh lives)
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-if [ -z "$PROJECT_DIR" ] && [ -f "$SCRIPT_DIR/../package.json" ]; then
-    PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-fi
-if [ -n "$PROJECT_DIR" ]; then
-    REF_CODE_DIR="$(cd "$PROJECT_DIR/ref-code" && pwd)"
-else
-    if [ -d "$SCRIPT_DIR/../ref-code" ]; then
-        REF_CODE_DIR="$(cd "$SCRIPT_DIR/../ref-code" && pwd)"
+if [ -z "$PROJECT_DIR" ]; then
+    if [ -f "$SCRIPT_DIR/../package.json" ]; then
+        PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
     else
-        REF_CODE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+        PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
     fi
 fi
-DEFAULT_OPENSSL_SOURCE_DIR=""
-if [ -n "$PROJECT_DIR" ] && [ -d "$PROJECT_DIR/ref-code/openssl" ]; then
-    DEFAULT_OPENSSL_SOURCE_DIR="$(cd "$PROJECT_DIR/ref-code/openssl" && pwd)"
-elif [ -n "$PROJECT_DIR" ] && [ -d "$PROJECT_DIR/ref-code.openssl" ]; then
-    DEFAULT_OPENSSL_SOURCE_DIR="$(cd "$PROJECT_DIR/ref-code.openssl" && pwd)"
-elif [ -d "$SCRIPT_DIR/../ref-code/openssl" ]; then
-    DEFAULT_OPENSSL_SOURCE_DIR="$(cd "$SCRIPT_DIR/../ref-code/openssl" && pwd)"
-elif [ -d "$SCRIPT_DIR/../ref-code.openssl" ]; then
-    DEFAULT_OPENSSL_SOURCE_DIR="$(cd "$SCRIPT_DIR/../ref-code.openssl" && pwd)"
-else
-    DEFAULT_OPENSSL_SOURCE_DIR="$REF_CODE_DIR/openssl"
-fi
+# Dependencies live in plugin root / deps (clone if missing)
+DEPS_DIR="${PROJECT_DIR}/deps"
+DEFAULT_OPENSSL_SOURCE_DIR="${DEPS_DIR}/openssl"
 OPENSSL_VERSION="${OPENSSL_VERSION:-3.2.0}"
 USE_QUICTLS="${USE_QUICTLS:-0}"
 QUICTLS_BRANCH="${QUICTLS_BRANCH:-openssl-3.1.7+quic}"

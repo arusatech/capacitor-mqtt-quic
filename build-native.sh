@@ -29,7 +29,8 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Get script directory and project root
+# Get script directory and project root (plugin root = where this script lives)
+# Dependency sources (openssl, nghttp3, ngtcp2) are cloned into PROJECT_DIR/deps/ if missing
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="${PROJECT_DIR:-$SCRIPT_DIR}"
 

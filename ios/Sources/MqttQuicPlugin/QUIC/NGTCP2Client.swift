@@ -13,6 +13,7 @@
 //
 
 import Foundation
+import NGTCP2Bridge
 
 /// ngtcp2-based QUIC client implementation
 public final class NGTCP2Client: QuicClientProtocol {
@@ -40,9 +41,14 @@ public final class NGTCP2Client: QuicClientProtocol {
     }
     
     deinit {
-        // Cleanup
-        Task {
-            try? await close()
+        // Cleanup native handle without capturing self (avoids retain cycle / "deallocated with non-zero retain count").
+        let handle = clientHandle
+        clientHandle = nil
+        if let h = handle {
+            Task {
+                _ = ngtcp2_client_close(h)
+                ngtcp2_client_destroy(h)
+            }
         }
     }
     
@@ -155,7 +161,7 @@ public final class NGTCP2Client: QuicClientProtocol {
         _ = data
     }
     
-    private func lastErrorMessage() -> String {
+    fileprivate func lastErrorMessage() -> String {
         guard let handle = clientHandle, let cStr = ngtcp2_client_last_error(handle) else {
             return "unknown QUIC error"
         }

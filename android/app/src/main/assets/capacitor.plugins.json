@@ -1,0 +1,6 @@
+[
+	{
+		"pkg": "@annadata/capacitor-mqtt-quic",
+		"classpath": "ai.annadata.mqttquic.MqttQuicPlugin"
+	}
+]

@@ -1,0 +1,4 @@
+module NGTCP2Bridge {
+    header "NGTCP2Bridge.h"
+    export *
+}

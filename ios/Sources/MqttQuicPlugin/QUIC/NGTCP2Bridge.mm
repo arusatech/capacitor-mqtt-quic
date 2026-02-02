@@ -77,7 +77,27 @@ class QuicClient {
     wakeup_fds_[1] = -1;
   }
 
-  ~QuicClient() { close(); }
+  ~QuicClient() {
+    try {
+      close();
+    } catch (...) {
+      // Never let exceptions escape destructor (would call std::terminate).
+      try {
+        if (worker_.joinable()) {
+          worker_.detach();
+        }
+      } catch (...) {
+        // Swallow: detach() can throw; must not throw from destructor.
+      }
+    }
+    // Final safety: never leave destructor with joinable thread (would call std::terminate in ~thread).
+    try {
+      if (worker_.joinable()) {
+        worker_.detach();
+      }
+    } catch (...) {
+    }
+  }
 
   int connect(const std::string &host, uint16_t port, const std::string &alpn) {
     {
@@ -178,7 +198,7 @@ class QuicClient {
     if (!conn_) {
       return 0;
     }
-    int rv = ngtcp2_conn_shutdown_stream_write(conn_, stream_id, 0);
+    int rv = ngtcp2_conn_shutdown_stream_write(conn_, 0, stream_id, 0);
     if (rv != 0) {
       setError(ngtcp2_strerror(rv));
       return -1;
@@ -198,7 +218,16 @@ class QuicClient {
     }
     signal_wakeup();
     if (worker_.joinable()) {
-      worker_.join();
+      try {
+        worker_.join();
+      } catch (...) {
+        // join() can throw. Detach so destructor won't terminate. detach() can also throw.
+        try {
+          worker_.detach();
+        } catch (...) {
+          // Swallow so close() doesn't throw.
+        }
+      }
     }
     cleanup();
     return 0;
@@ -256,12 +285,12 @@ class QuicClient {
       if (fd == -1) {
         continue;
       }
-      if (connect(fd, rp->ai_addr, rp->ai_addrlen) == 0) {
+      if (::connect(fd, rp->ai_addr, rp->ai_addrlen) == 0) {
         memcpy(&remote_addr_, rp->ai_addr, rp->ai_addrlen);
         remote_addrlen_ = (socklen_t)rp->ai_addrlen;
         break;
       }
-      close(fd);
+      ::close(fd);
       fd = -1;
     }
     freeaddrinfo(res);
@@ -274,7 +303,7 @@ class QuicClient {
     if (getsockname(fd, (struct sockaddr *)&local_addr_, &local_addrlen_) !=
         0) {
       setError("getsockname failed");
-      close(fd);
+      ::close(fd);
       return -1;
     }
 
@@ -647,15 +676,15 @@ class QuicClient {
       ssl_ctx_ = nullptr;
     }
     if (fd_ != -1) {
-      close(fd_);
+      ::close(fd_);
       fd_ = -1;
     }
     if (wakeup_fds_[0] != -1) {
-      close(wakeup_fds_[0]);
+      ::close(wakeup_fds_[0]);
       wakeup_fds_[0] = -1;
     }
     if (wakeup_fds_[1] != -1) {
-      close(wakeup_fds_[1]);
+      ::close(wakeup_fds_[1]);
       wakeup_fds_[1] = -1;
     }
   }
@@ -727,10 +756,11 @@ class QuicClient {
     return 0;
   }
 
-  static int stream_close_cb(ngtcp2_conn *conn, int64_t stream_id,
-                             uint64_t app_error_code, void *user_data,
-                             void *stream_user_data) {
+  static int stream_close_cb(ngtcp2_conn *conn, uint32_t flags,
+                             int64_t stream_id, uint64_t app_error_code,
+                             void *user_data, void *stream_user_data) {
     (void)conn;
+    (void)flags;
     (void)app_error_code;
     (void)stream_user_data;
     auto *client = static_cast<QuicClient *>(user_data);

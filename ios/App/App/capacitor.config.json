@@ -1,0 +1,8 @@
+{
+	"appId": "ai.annadata.mqttquic",
+	"appName": "MqttQuicPlugin",
+	"webDir": "www",
+	"packageClassList": [
+		"MqttQuicPlugin"
+	]
+}

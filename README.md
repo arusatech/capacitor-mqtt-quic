@@ -2,6 +2,8 @@
 
 MQTT-over-QUIC Capacitor plugin for iOS and Android. Uses ngtcp2 for QUIC on native; MQTT over WebSocket (WSS) fallback on web.
 
+**Capacitor:** Supports **Capacitor >= 7.0.0** (including Capacitor 8). See [CAPACITOR_VERSION_SUPPORT.md](./CAPACITOR_VERSION_SUPPORT.md) for details.
+
 **Features:**
 - ✅ **MQTT 5.0** support with full properties and reason codes
 - ✅ **MQTT 3.1.1** support (backward compatible)
