@@ -23,6 +23,7 @@ if [ -z "$PROJECT_DIR" ]; then
     PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 fi
 DEPS_DIR="${PROJECT_DIR}/deps"
+[ -f "$PROJECT_DIR/deps-versions.sh" ] && . "$PROJECT_DIR/deps-versions.sh"
 NGHTTP3_SOURCE_DIR="${NGHTTP3_SOURCE_DIR:-${DEPS_DIR}/nghttp3}"
 if [[ "$NGHTTP3_SOURCE_DIR" != /* ]]; then
     NGHTTP3_SOURCE_DIR="${DEPS_DIR}/$NGHTTP3_SOURCE_DIR"
@@ -84,12 +85,20 @@ echo "  SDK Path: $IOS_SDK_PATH"
 echo "  Build Type: $BUILD_TYPE"
 echo "  Deployment Target: iOS $IOS_DEPLOYMENT_TARGET"
 
-# Clone nghttp3 if missing
+# Clone nghttp3 if missing (URL from deps-versions.sh / ref-code/VERSION.txt)
+NGHTTP3_REPO_URL="${NGHTTP3_REPO_URL:-https://github.com/ngtcp2/nghttp3.git}"
 if [ ! -d "$NGHTTP3_SOURCE_DIR" ]; then
     echo "nghttp3 source not found. Cloning into $NGHTTP3_SOURCE_DIR ..."
     mkdir -p "$DEPS_DIR"
-    git clone --recurse-submodules https://github.com/ngtcp2/nghttp3.git "$NGHTTP3_SOURCE_DIR" || {
+    git clone --recurse-submodules "$NGHTTP3_REPO_URL" "$NGHTTP3_SOURCE_DIR" || {
         echo "Error: Failed to clone nghttp3"
+        exit 1
+    }
+fi
+if [ -n "$NGHTTP3_COMMIT" ] && [ -d "$NGHTTP3_SOURCE_DIR/.git" ]; then
+    echo "Pinning nghttp3 to commit $NGHTTP3_COMMIT"
+    (cd "$NGHTTP3_SOURCE_DIR" && git fetch origin "$NGHTTP3_COMMIT" 2>/dev/null; git checkout "$NGHTTP3_COMMIT") || {
+        echo "Error: Failed to checkout nghttp3 commit $NGHTTP3_COMMIT"
         exit 1
     }
 fi
@@ -105,7 +114,7 @@ if [ ! -f "$NGHTTP3_SOURCE_DIR/sfparse/sfparse.c" ] && [ ! -f "$NGHTTP3_SOURCE_D
     else
         echo "Error: nghttp3 submodules are missing (sfparse)"
         echo "Please clone with submodules:"
-        echo "  git clone --recurse-submodules https://github.com/ngtcp2/nghttp3.git $NGHTTP3_SOURCE_DIR"
+        echo "  git clone --recurse-submodules $NGHTTP3_REPO_URL $NGHTTP3_SOURCE_DIR"
         echo "Or if already cloned:"
         echo "  cd $NGHTTP3_SOURCE_DIR && git submodule update --init --recursive"
         exit 1

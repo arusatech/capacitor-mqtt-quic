@@ -22,10 +22,11 @@ if [ -z "$PROJECT_DIR" ]; then
     PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 fi
 DEPS_DIR="${PROJECT_DIR}/deps"
+[ -f "$PROJECT_DIR/deps-versions.sh" ] && . "$PROJECT_DIR/deps-versions.sh"
 DEFAULT_OPENSSL_SOURCE_DIR="${DEPS_DIR}/openssl"
 OPENSSL_VERSION="${OPENSSL_VERSION:-3.2.0}"
-USE_QUICTLS="${USE_QUICTLS:-0}"
-QUICTLS_BRANCH="${QUICTLS_BRANCH:-openssl-3.1.7+quic}"
+USE_QUICTLS="${USE_QUICTLS:-1}"
+QUICTLS_BRANCH="${QUICTLS_BRANCH:-main}"
 ANDROID_NDK="${ANDROID_NDK:-}"
 ANDROID_ABI="${ANDROID_ABI:-arm64-v8a}"
 ANDROID_PLATFORM="${ANDROID_PLATFORM:-android-21}"
@@ -118,21 +119,41 @@ if [[ "$INSTALL_PREFIX" != *"/$ANDROID_ABI" ]]; then
     INSTALL_PREFIX="$INSTALL_PREFIX/$ANDROID_ABI"
 fi
 
-# Check if OpenSSL/quictls source exists
+# Check if OpenSSL/quictls source exists (quictls = new QuicTLS project; URL/commit from deps-versions.sh / ref-code/VERSION.txt)
 if [ "$USE_QUICTLS" = "1" ]; then
     OPENSSL_SOURCE_DIR="${OPENSSL_SOURCE_DIR:-$DEFAULT_OPENSSL_SOURCE_DIR}"
-    OPENSSL_REPO_URL="https://github.com/quictls/openssl.git"
+    OPENSSL_REPO_URL="${QUICTLS_REPO_URL:-https://github.com/quictls/quictls.git}"
     OPENSSL_REPO_BRANCH="$QUICTLS_BRANCH"
 else
     OPENSSL_SOURCE_DIR="${OPENSSL_SOURCE_DIR:-$DEFAULT_OPENSSL_SOURCE_DIR}"
     OPENSSL_REPO_URL="https://github.com/openssl/openssl.git"
     OPENSSL_REPO_BRANCH="openssl-$OPENSSL_VERSION"
 fi
+# If existing clone is from a different repo (e.g. old quictls/openssl), remove so we clone correct URL
+if [ "$USE_QUICTLS" = "1" ] && [ -d "$OPENSSL_SOURCE_DIR/.git" ]; then
+    CURRENT_ORIGIN=$(cd "$OPENSSL_SOURCE_DIR" && git config --get remote.origin.url 2>/dev/null || true)
+    WANTED_QUICTLS="quictls/quictls"
+    if [ -n "$CURRENT_ORIGIN" ] && ! echo "$CURRENT_ORIGIN" | grep -q "$WANTED_QUICTLS"; then
+        echo "Existing clone is from $CURRENT_ORIGIN; re-cloning from $OPENSSL_REPO_URL"
+        rm -rf "$OPENSSL_SOURCE_DIR"
+    fi
+fi
 if [ ! -d "$OPENSSL_SOURCE_DIR" ]; then
     echo "OpenSSL source not found. Cloning..."
-    git clone --depth 1 --branch "$OPENSSL_REPO_BRANCH" \
-        "$OPENSSL_REPO_URL" "$OPENSSL_SOURCE_DIR" || \
-    git clone --depth 1 "$OPENSSL_REPO_URL" "$OPENSSL_SOURCE_DIR"
+    if [ -n "$OPENSSL_COMMIT" ]; then
+        git clone "$OPENSSL_REPO_URL" "$OPENSSL_SOURCE_DIR" || { echo "Error: Failed to clone OpenSSL"; exit 1; }
+    else
+        git clone --depth 1 --branch "$OPENSSL_REPO_BRANCH" \
+            "$OPENSSL_REPO_URL" "$OPENSSL_SOURCE_DIR" || \
+        git clone --depth 1 "$OPENSSL_REPO_URL" "$OPENSSL_SOURCE_DIR"
+    fi
+fi
+if [ -n "$OPENSSL_COMMIT" ] && [ -d "$OPENSSL_SOURCE_DIR/.git" ]; then
+    echo "Pinning OpenSSL to commit $OPENSSL_COMMIT"
+    (cd "$OPENSSL_SOURCE_DIR" && git fetch origin main 2>/dev/null; git checkout "$OPENSSL_COMMIT") || {
+        echo "Error: Failed to checkout OpenSSL commit $OPENSSL_COMMIT"
+        exit 1
+    }
 fi
 
 # Validate quictls source when requested

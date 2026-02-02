@@ -22,6 +22,8 @@ export PROJECT_DIR="/Users/annadata/Project_A/annadata-production/ref-code/capac
 Override with `NGTCP2_SOURCE_DIR`, `NGHTTP3_SOURCE_DIR`, `OPENSSL_SOURCE_DIR`
 if you store sources elsewhere.
 
+**Version pinning:** Build scripts source `deps-versions.sh` in the plugin root and pin ngtcp2, nghttp3, and OpenSSL to fixed git commits for reproducible builds and server compatibility. Edit `deps-versions.sh` to change `NGTCP2_COMMIT`, `NGHTTP3_COMMIT`, or `OPENSSL_COMMIT`.
+
 ## Quick Start
 
 ### Option 1: Use Pre-built Libraries (Recommended for Development)
@@ -44,7 +46,7 @@ cd ios
 ```
 
 This will:
-- Clone quictls (OpenSSL fork with QUIC API) if not present
+- Clone QuicTLS (https://github.com/quictls/quictls) if not present (OpenSSL fork with QUIC API)
 - Build static libraries for iOS
 - Install to `ios/install/openssl-ios/`
 - Sync `libssl.a`, `libcrypto.a` to `ios/libs/` and headers to `ios/include/openssl/`

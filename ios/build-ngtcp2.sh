@@ -1,19 +1,12 @@
 #!/bin/bash
 #
 # Build script for ngtcp2 on iOS
-# 
-# This script builds ngtcp2 as a static library for iOS.
-# It requires:
-# - Xcode 14+ (for iOS 15+)
-# - CMake 3.20+
-# - iOS SDK 15.0+
-# - OpenSSL 3.0+ (built for iOS)
-#
+# Builds ngtcp2 as a static library for iOS.
+# Default TLS backend: WolfSSL (TLS 1.3 + QUIC). Set USE_WOLFSSL=0 or use --quictls for QuicTLS.
 # Usage:
-#   ./build-ngtcp2.sh [--openssl-path PATH] [--arch ARCH] [--sdk SDK]
-#
-# Example:
-#   ./build-ngtcp2.sh --openssl-path /path/to/openssl-ios --arch arm64 --sdk iphoneos
+#   ./build-ngtcp2.sh [--wolfssl-path PATH] [--openssl-path PATH] [--arch ARCH] [--sdk SDK]
+# Example (default WolfSSL): ./build-ngtcp2.sh   # uses ios/install/wolfssl-ios when USE_WOLFSSL=1
+# Example (QuicTLS): ./build-ngtcp2.sh --openssl-path ./install/openssl-ios --quictls
 #
 
 set -e
@@ -24,12 +17,15 @@ if [ -z "$PROJECT_DIR" ]; then
     PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 fi
 DEPS_DIR="${PROJECT_DIR}/deps"
+[ -f "$PROJECT_DIR/deps-versions.sh" ] && . "$PROJECT_DIR/deps-versions.sh"
 NGTCP2_SOURCE_DIR="${NGTCP2_SOURCE_DIR:-${DEPS_DIR}/ngtcp2}"
 if [[ "$NGTCP2_SOURCE_DIR" != /* ]]; then
     NGTCP2_SOURCE_DIR="${DEPS_DIR}/$NGTCP2_SOURCE_DIR"
 fi
+WOLFSSL_PATH="${WOLFSSL_PATH:-}"
 OPENSSL_PATH="${OPENSSL_PATH:-}"
-USE_QUICTLS="${USE_QUICTLS:-0}"
+USE_WOLFSSL="${USE_WOLFSSL:-1}"
+USE_QUICTLS="${USE_QUICTLS:-1}"
 ARCH="${ARCH:-arm64}"
 SDK="${SDK:-iphoneos}"
 BUILD_TYPE="${BUILD_TYPE:-Release}"
@@ -38,12 +34,18 @@ IOS_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET:-15.0}"
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
+        --wolfssl-path)
+            WOLFSSL_PATH="$2"
+            USE_WOLFSSL=1
+            shift 2
+            ;;
         --openssl-path)
             OPENSSL_PATH="$2"
             shift 2
             ;;
         --quictls)
             USE_QUICTLS=1
+            USE_WOLFSSL=0
             shift
             ;;
         --arch)
@@ -64,7 +66,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--openssl-path PATH] [--arch ARCH] [--sdk SDK] [--quictls]"
+            echo "Usage: $0 [--wolfssl-path PATH] [--openssl-path PATH] [--arch ARCH] [--sdk SDK] [--quictls]"
             exit 1
             ;;
     esac
@@ -95,12 +97,20 @@ echo "  SDK Path: $IOS_SDK_PATH"
 echo "  Build Type: $BUILD_TYPE"
 echo "  Deployment Target: iOS $IOS_DEPLOYMENT_TARGET"
 
-# Clone ngtcp2 if missing
+# Clone ngtcp2 if missing (URL from deps-versions.sh / ref-code/VERSION.txt)
+NGTCP2_REPO_URL="${NGTCP2_REPO_URL:-https://github.com/ngtcp2/ngtcp2.git}"
 if [ ! -d "$NGTCP2_SOURCE_DIR" ]; then
     echo "ngtcp2 source not found. Cloning into $NGTCP2_SOURCE_DIR ..."
     mkdir -p "$DEPS_DIR"
-    git clone --recurse-submodules https://github.com/ngtcp2/ngtcp2.git "$NGTCP2_SOURCE_DIR" || {
+    git clone --recurse-submodules "$NGTCP2_REPO_URL" "$NGTCP2_SOURCE_DIR" || {
         echo "Error: Failed to clone ngtcp2"
+        exit 1
+    }
+fi
+if [ -n "$NGTCP2_COMMIT" ] && [ -d "$NGTCP2_SOURCE_DIR/.git" ]; then
+    echo "Pinning ngtcp2 to commit $NGTCP2_COMMIT"
+    (cd "$NGTCP2_SOURCE_DIR" && git fetch origin "$NGTCP2_COMMIT" 2>/dev/null; git checkout "$NGTCP2_COMMIT") || {
+        echo "Error: Failed to checkout ngtcp2 commit $NGTCP2_COMMIT"
         exit 1
     }
 fi
@@ -116,77 +126,74 @@ if [ ! -f "$NGTCP2_SOURCE_DIR/munit/munit.c" ] && [ ! -f "$NGTCP2_SOURCE_DIR/tes
     else
         echo "Warning: ngtcp2 submodules are missing (munit)"
         echo "Tests will be disabled, but if configuration still fails, clone with submodules:"
-        echo "  git clone --recurse-submodules https://github.com/ngtcp2/ngtcp2.git $NGTCP2_SOURCE_DIR"
+        echo "  git clone --recurse-submodules $NGTCP2_REPO_URL $NGTCP2_SOURCE_DIR"
     fi
 fi
 
-# Check OpenSSL
-if [ -z "$OPENSSL_PATH" ]; then
+# Prefer WolfSSL (TLS 1.3 + QUIC) when USE_WOLFSSL=1
+if [ "$USE_WOLFSSL" = "1" ] && [ -z "$WOLFSSL_PATH" ]; then
+    if [ -d "$SCRIPT_DIR/install/wolfssl-ios" ]; then
+        WOLFSSL_PATH="$SCRIPT_DIR/install/wolfssl-ios"
+    fi
+fi
+if [ -z "$WOLFSSL_PATH" ] && [ -z "$OPENSSL_PATH" ]; then
     if [ -d "$SCRIPT_DIR/install/openssl-ios" ]; then
         OPENSSL_PATH="$SCRIPT_DIR/install/openssl-ios"
     else
-        echo "Warning: OpenSSL path not specified. ngtcp2 will be built without TLS support."
-        echo "To build with OpenSSL, use: --openssl-path /path/to/openssl-ios"
-        echo ""
-        echo "You can build OpenSSL for iOS using:"
-        echo "  git clone https://github.com/openssl/openssl.git"
-        echo "  cd openssl"
-        echo "  ./Configure ios64-cross --prefix=/tmp/openssl-ios no-shared no-tests"
-        echo "  make -j\$(sysctl -n hw.ncpu)"
-        echo "  make install"
+        echo "Error: No TLS path. Build WolfSSL or OpenSSL first."
+        echo "  WolfSSL: ./build-wolfssl.sh  then  ./build-ngtcp2.sh --wolfssl-path ./install/wolfssl-ios"
+        echo "  QuicTLS: ./build-openssl.sh  then  ./build-ngtcp2.sh --openssl-path ./install/openssl-ios --quictls"
         exit 1
     fi
 fi
 
-# Verify OpenSSL installation
-if [[ "$OPENSSL_PATH" != /* ]]; then
-    if [ -d "$SCRIPT_DIR/$OPENSSL_PATH" ]; then
-        OPENSSL_PATH="$SCRIPT_DIR/$OPENSSL_PATH"
-    elif [ -d "$DEPS_DIR/$OPENSSL_PATH" ]; then
-        OPENSSL_PATH="$DEPS_DIR/$OPENSSL_PATH"
-    fi
-fi
-
-if [ ! -d "$OPENSSL_PATH" ]; then
-    echo "Error: OpenSSL path does not exist: $OPENSSL_PATH"
-    exit 1
-fi
-
-# Check for required OpenSSL files
-OPENSSL_LIB_DIR="$OPENSSL_PATH/lib"
-OPENSSL_INCLUDE_DIR="$OPENSSL_PATH/include"
-OPENSSL_CRYPTO_LIB="$OPENSSL_LIB_DIR/libcrypto.a"
-OPENSSL_SSL_LIB="$OPENSSL_LIB_DIR/libssl.a"
-
-if [ ! -f "$OPENSSL_CRYPTO_LIB" ]; then
-    echo "Error: OpenSSL crypto library not found: $OPENSSL_CRYPTO_LIB"
-    echo "Please ensure OpenSSL is built and installed correctly"
-    exit 1
-fi
-
-if [ ! -f "$OPENSSL_SSL_LIB" ]; then
-    echo "Error: OpenSSL SSL library not found: $OPENSSL_SSL_LIB"
-    echo "Please ensure OpenSSL is built and installed correctly"
-    exit 1
-fi
-
-if [ ! -d "$OPENSSL_INCLUDE_DIR" ]; then
-    echo "Error: OpenSSL include directory not found: $OPENSSL_INCLUDE_DIR"
-    echo "Please ensure OpenSSL is built and installed correctly"
-    exit 1
-fi
-
-if [ "$USE_QUICTLS" = "1" ]; then
-    if ! grep -q "SSL_provide_quic_data" "$OPENSSL_INCLUDE_DIR/openssl/ssl.h" 2>/dev/null; then
-        echo "Error: OpenSSL headers at $OPENSSL_INCLUDE_DIR do not include QUIC APIs."
-        echo "Rebuild OpenSSL with --quictls and ensure OPENSSL_SOURCE_DIR points to quictls."
+# Resolve WolfSSL path and verify
+if [ -n "$WOLFSSL_PATH" ]; then
+    [[ "$WOLFSSL_PATH" != /* ]] && [ -d "$SCRIPT_DIR/$WOLFSSL_PATH" ] && WOLFSSL_PATH="$SCRIPT_DIR/$WOLFSSL_PATH"
+    [[ "$WOLFSSL_PATH" != /* ]] && [ -d "$DEPS_DIR/$WOLFSSL_PATH" ] && WOLFSSL_PATH="$DEPS_DIR/$WOLFSSL_PATH"
+    if [ ! -d "$WOLFSSL_PATH" ]; then
+        echo "Error: WolfSSL path does not exist: $WOLFSSL_PATH"
         exit 1
     fi
+    WOLFSSL_LIB="$WOLFSSL_PATH/lib/libwolfssl.a"
+    WOLFSSL_INCLUDE_DIR="$WOLFSSL_PATH/include"
+    if [ ! -f "$WOLFSSL_LIB" ]; then
+        echo "Error: WolfSSL library not found: $WOLFSSL_LIB"
+        exit 1
+    fi
+    if [ ! -d "$WOLFSSL_INCLUDE_DIR/wolfssl" ]; then
+        echo "Error: WolfSSL headers not found: $WOLFSSL_INCLUDE_DIR/wolfssl"
+        exit 1
+    fi
+    echo "  TLS: WolfSSL (TLS 1.3 + QUIC)"
+    echo "  WolfSSL Path: $WOLFSSL_PATH"
 fi
 
-echo "  OpenSSL Path: $OPENSSL_PATH"
-echo "  OpenSSL Libraries: $OPENSSL_LIB_DIR"
-echo "  OpenSSL Headers: $OPENSSL_INCLUDE_DIR"
+# Resolve OpenSSL path and verify (when not using WolfSSL)
+if [ -n "$OPENSSL_PATH" ]; then
+    [[ "$OPENSSL_PATH" != /* ]] && [ -d "$SCRIPT_DIR/$OPENSSL_PATH" ] && OPENSSL_PATH="$SCRIPT_DIR/$OPENSSL_PATH"
+    [[ "$OPENSSL_PATH" != /* ]] && [ -d "$DEPS_DIR/$OPENSSL_PATH" ] && OPENSSL_PATH="$DEPS_DIR/$OPENSSL_PATH"
+    if [ ! -d "$OPENSSL_PATH" ]; then
+        echo "Error: OpenSSL path does not exist: $OPENSSL_PATH"
+        exit 1
+    fi
+    OPENSSL_LIB_DIR="$OPENSSL_PATH/lib"
+    OPENSSL_INCLUDE_DIR="$OPENSSL_PATH/include"
+    OPENSSL_CRYPTO_LIB="$OPENSSL_LIB_DIR/libcrypto.a"
+    OPENSSL_SSL_LIB="$OPENSSL_LIB_DIR/libssl.a"
+    if [ ! -f "$OPENSSL_CRYPTO_LIB" ] || [ ! -f "$OPENSSL_SSL_LIB" ]; then
+        echo "Error: OpenSSL libraries not found in $OPENSSL_PATH"
+        exit 1
+    fi
+    if [ "$USE_QUICTLS" = "1" ]; then
+        if ! grep -q "SSL_provide_quic_data" "$OPENSSL_INCLUDE_DIR/openssl/ssl.h" 2>/dev/null; then
+            echo "Error: OpenSSL at $OPENSSL_INCLUDE_DIR does not include QUIC APIs (use QuicTLS)."
+            exit 1
+        fi
+    fi
+    echo "  TLS: OpenSSL/QuicTLS"
+    echo "  OpenSSL Path: $OPENSSL_PATH"
+fi
 
 # Create build directory
 BUILD_DIR="build/ios-$ARCH"
@@ -205,6 +212,7 @@ fi
 cd "$BUILD_DIR"
 
 # Configure CMake
+# Build static libs only; shared dylib would need Security/CoreFoundation for WolfSSL's ProcessPeerCerts on iOS
 CMAKE_ARGS=(
     -DCMAKE_SYSTEM_NAME=iOS
     -DCMAKE_OSX_DEPLOYMENT_TARGET="$IOS_DEPLOYMENT_TARGET"
@@ -212,14 +220,23 @@ CMAKE_ARGS=(
     -DCMAKE_OSX_SYSROOT="$IOS_SDK_PATH"
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
     -DENABLE_LIB_ONLY=ON
+    -DENABLE_SHARED_LIB=OFF
+    -DENABLE_STATIC_LIB=ON
     -DCMAKE_INSTALL_PREFIX="$(pwd)/install"
     -DENABLE_TESTS=OFF
     -DENABLE_EXAMPLES=OFF
 )
 
-if [ -n "$OPENSSL_PATH" ]; then
-    # CMake's FindOpenSSL needs explicit paths
+if [ -n "$WOLFSSL_PATH" ]; then
     CMAKE_ARGS+=(
+        -DENABLE_WOLFSSL=ON
+        -DENABLE_OPENSSL=OFF
+        -DWOLFSSL_INCLUDE_DIR="$WOLFSSL_INCLUDE_DIR"
+        -DWOLFSSL_LIBRARY="$WOLFSSL_LIB"
+    )
+elif [ -n "$OPENSSL_PATH" ]; then
+    CMAKE_ARGS+=(
+        -DENABLE_WOLFSSL=OFF
         -DENABLE_OPENSSL=ON
         -DOPENSSL_ROOT_DIR="$OPENSSL_PATH"
         -DOPENSSL_CRYPTO_LIBRARY="$OPENSSL_CRYPTO_LIB"
@@ -227,14 +244,10 @@ if [ -n "$OPENSSL_PATH" ]; then
         -DOPENSSL_INCLUDE_DIR="$OPENSSL_INCLUDE_DIR"
         -DOPENSSL_LIBRARIES="$OPENSSL_SSL_LIB;$OPENSSL_CRYPTO_LIB"
     )
-
-    if [ "$USE_QUICTLS" = "1" ]; then
-        CMAKE_ARGS+=(
-            -DENABLE_QUICTLS=ON
-        )
-    fi
+    [ "$USE_QUICTLS" = "1" ] && CMAKE_ARGS+=( -DENABLE_QUICTLS=ON )
 else
     CMAKE_ARGS+=(
+        -DENABLE_WOLFSSL=OFF
         -DENABLE_OPENSSL=OFF
     )
 fi
@@ -265,8 +278,14 @@ done
 if [ -d "$(pwd)/install/include/ngtcp2" ]; then
     cp -R "$(pwd)/install/include/ngtcp2" "$INCLUDE_DIR/"
 fi
+# When using WolfSSL, ensure libwolfssl.a is in libs (for xcframework)
+if [ -n "$WOLFSSL_PATH" ] && [ -f "$WOLFSSL_PATH/lib/libwolfssl.a" ]; then
+    cp -f "$WOLFSSL_PATH/lib/libwolfssl.a" "$LIBS_DIR/"
+    [ -d "$WOLFSSL_PATH/include/wolfssl" ] && rm -rf "$INCLUDE_DIR/wolfssl"; cp -R "$WOLFSSL_PATH/include/wolfssl" "$INCLUDE_DIR/"
+fi
 
 echo ""
 echo "Build complete!"
 echo "Static library: $(pwd)/install/lib/libngtcp2.a"
+echo "Crypto: libngtcp2_crypto_wolfssl.a or libngtcp2_crypto_quictls.a"
 echo "Headers: $(pwd)/install/include"

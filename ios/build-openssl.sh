@@ -27,10 +27,11 @@ if [ -z "$PROJECT_DIR" ]; then
 fi
 # Dependencies live in plugin root / deps (clone if missing)
 DEPS_DIR="${PROJECT_DIR}/deps"
+[ -f "$PROJECT_DIR/deps-versions.sh" ] && . "$PROJECT_DIR/deps-versions.sh"
 DEFAULT_OPENSSL_SOURCE_DIR="${DEPS_DIR}/openssl"
 OPENSSL_VERSION="${OPENSSL_VERSION:-3.2.0}"
-USE_QUICTLS="${USE_QUICTLS:-0}"
-QUICTLS_BRANCH="${QUICTLS_BRANCH:-openssl-3.1.7+quic}"
+USE_QUICTLS="${USE_QUICTLS:-1}"
+QUICTLS_BRANCH="${QUICTLS_BRANCH:-main}"
 ARCH="${ARCH:-arm64}"
 SDK="${SDK:-iphoneos}"
 IOS_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET:-15.0}"
@@ -100,21 +101,41 @@ echo "  SDK Path: $IOS_SDK_PATH"
 echo "  Deployment Target: iOS $IOS_DEPLOYMENT_TARGET"
 echo "  Install Prefix: $INSTALL_PREFIX"
 
-# Check if OpenSSL/quictls source exists
+# Check if OpenSSL/quictls source exists (quictls = new QuicTLS project; URL/commit from deps-versions.sh / ref-code/VERSION.txt)
 if [ "$USE_QUICTLS" = "1" ]; then
     OPENSSL_SOURCE_DIR="${OPENSSL_SOURCE_DIR:-$DEFAULT_OPENSSL_SOURCE_DIR}"
-    OPENSSL_REPO_URL="https://github.com/quictls/openssl.git"
+    OPENSSL_REPO_URL="${QUICTLS_REPO_URL:-https://github.com/quictls/quictls.git}"
     OPENSSL_REPO_BRANCH="$QUICTLS_BRANCH"
 else
     OPENSSL_SOURCE_DIR="${OPENSSL_SOURCE_DIR:-$DEFAULT_OPENSSL_SOURCE_DIR}"
     OPENSSL_REPO_URL="https://github.com/openssl/openssl.git"
     OPENSSL_REPO_BRANCH="openssl-$OPENSSL_VERSION"
 fi
+# If existing clone is from a different repo (e.g. old quictls/openssl), remove so we clone correct URL
+if [ "$USE_QUICTLS" = "1" ] && [ -d "$OPENSSL_SOURCE_DIR/.git" ]; then
+    CURRENT_ORIGIN=$(cd "$OPENSSL_SOURCE_DIR" && git config --get remote.origin.url 2>/dev/null || true)
+    WANTED_QUICTLS="quictls/quictls"
+    if [ -n "$CURRENT_ORIGIN" ] && ! echo "$CURRENT_ORIGIN" | grep -q "$WANTED_QUICTLS"; then
+        echo "Existing clone is from $CURRENT_ORIGIN; re-cloning from $OPENSSL_REPO_URL"
+        rm -rf "$OPENSSL_SOURCE_DIR"
+    fi
+fi
 if [ ! -d "$OPENSSL_SOURCE_DIR" ]; then
     echo "OpenSSL source not found. Cloning..."
-    git clone --depth 1 --branch "$OPENSSL_REPO_BRANCH" \
-        "$OPENSSL_REPO_URL" "$OPENSSL_SOURCE_DIR" || \
-    git clone --depth 1 "$OPENSSL_REPO_URL" "$OPENSSL_SOURCE_DIR"
+    if [ -n "$OPENSSL_COMMIT" ]; then
+        git clone "$OPENSSL_REPO_URL" "$OPENSSL_SOURCE_DIR" || { echo "Error: Failed to clone OpenSSL"; exit 1; }
+    else
+        git clone --depth 1 --branch "$OPENSSL_REPO_BRANCH" \
+            "$OPENSSL_REPO_URL" "$OPENSSL_SOURCE_DIR" || \
+        git clone --depth 1 "$OPENSSL_REPO_URL" "$OPENSSL_SOURCE_DIR"
+    fi
+fi
+if [ -n "$OPENSSL_COMMIT" ] && [ -d "$OPENSSL_SOURCE_DIR/.git" ]; then
+    echo "Pinning OpenSSL to commit $OPENSSL_COMMIT"
+    (cd "$OPENSSL_SOURCE_DIR" && git fetch origin main 2>/dev/null; git checkout "$OPENSSL_COMMIT") || {
+        echo "Error: Failed to checkout OpenSSL commit $OPENSSL_COMMIT"
+        exit 1
+    }
 fi
 
 # Validate quictls source when requested
@@ -222,12 +243,14 @@ if [ "$PLATFORM" = "ios64-cross" ]; then
     if [ -f "Makefile" ]; then
         echo "Fixing Makefile to use correct sysroot..."
         
-        # Use Python for more reliable text processing
-        python3 << EOF
+        # Use Python for more reliable text processing (heredoc quoted so bash does not parse parentheses)
+        export IOS_SDK_PATH
+        python3 << 'EOFPY'
 import re
 import sys
+import os
 
-sdk_path = "$IOS_SDK_PATH"
+sdk_path = os.environ.get('IOS_SDK_PATH', '')
 makefile_path = "Makefile"
 
 # Read the Makefile
@@ -291,7 +314,7 @@ if re.search(r'-isysroot\s+-[a-zA-Z]', content):
     sys.exit(1)
 
 print("Makefile fixed successfully")
-EOF
+EOFPY
         
         if [ $? -ne 0 ]; then
             echo "Error: Failed to fix Makefile"

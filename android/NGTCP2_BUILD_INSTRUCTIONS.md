@@ -51,7 +51,7 @@ cd android
 ```
 
 This will:
-- Clone quictls (OpenSSL fork with QUIC API) if not present
+- Clone QuicTLS (https://github.com/quictls/quictls) if not present (OpenSSL fork with QUIC API)
 - Build static libraries for Android
 - Install to `android/install/openssl-android/<abi>/`
 

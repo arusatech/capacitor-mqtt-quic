@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Build script for capacitor-mqtt-quic plugin
-# This script builds OpenSSL (quictls), nghttp3, and ngtcp2 for iOS and Android
+# By default builds WolfSSL (TLS 1.3 + QUIC), then nghttp3, then ngtcp2 for iOS and Android.
+# Set USE_WOLFSSL=0 to use QuicTLS instead of WolfSSL. Default is controlled by deps-versions.sh.
 
 set -e
 
@@ -33,6 +34,9 @@ print_error() {
 # Dependency sources (openssl, nghttp3, ngtcp2) are cloned into PROJECT_DIR/deps/ if missing
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="${PROJECT_DIR:-$SCRIPT_DIR}"
+# Default TLS backend: WolfSSL (single source of truth)
+[ -f "$PROJECT_DIR/deps-versions.sh" ] && . "$PROJECT_DIR/deps-versions.sh"
+USE_WOLFSSL="${USE_WOLFSSL:-1}"
 
 # Check if we're on macOS for iOS builds
 check_macos() {
@@ -91,31 +95,49 @@ detect_ndk() {
     return 1
 }
 
-# Build iOS libraries
+# Build iOS libraries (WolfSSL or QuicTLS → nghttp3 → ngtcp2)
 build_ios() {
-    print_status "Building iOS libraries (OpenSSL → nghttp3 → ngtcp2)..."
+    USE_WOLFSSL="${USE_WOLFSSL:-1}"
+    if [ "$USE_WOLFSSL" = "1" ]; then
+        print_status "Building iOS libraries (WolfSSL → nghttp3 → ngtcp2)..."
+    else
+        print_status "Building iOS libraries (OpenSSL/QuicTLS → nghttp3 → ngtcp2)..."
+    fi
     
     if ! check_macos; then
         return 1
     fi
     
     export PROJECT_DIR="$PROJECT_DIR"
-    
-    # Build OpenSSL (quictls)
-    print_status "Step 1/3: Building OpenSSL (quictls) for iOS..."
+    export USE_WOLFSSL="$USE_WOLFSSL"
     cd "$PROJECT_DIR/ios"
-    if [ -f "./build-openssl.sh" ]; then
-        ./build-openssl.sh --quictls || {
-            print_error "Failed to build OpenSSL for iOS"
+    
+    if [ "$USE_WOLFSSL" = "1" ]; then
+        print_status "Step 1/3: Building WolfSSL (TLS 1.3 + QUIC) for iOS..."
+        if [ -f "./build-wolfssl.sh" ]; then
+            ./build-wolfssl.sh || {
+                print_error "Failed to build WolfSSL for iOS"
+                return 1
+            }
+            print_success "WolfSSL built for iOS"
+        else
+            print_error "build-wolfssl.sh not found in ios/"
             return 1
-        }
-        print_success "OpenSSL (quictls) built for iOS"
+        fi
     else
-        print_error "build-openssl.sh not found in ios/"
-        return 1
+        print_status "Step 1/3: Building OpenSSL (quictls) for iOS..."
+        if [ -f "./build-openssl.sh" ]; then
+            ./build-openssl.sh --quictls || {
+                print_error "Failed to build OpenSSL for iOS"
+                return 1
+            }
+            print_success "OpenSSL (quictls) built for iOS"
+        else
+            print_error "build-openssl.sh not found in ios/"
+            return 1
+        fi
     fi
     
-    # Build nghttp3
     print_status "Step 2/3: Building nghttp3 for iOS..."
     if [ -f "./build-nghttp3.sh" ]; then
         ./build-nghttp3.sh || {
@@ -128,13 +150,19 @@ build_ios() {
         return 1
     fi
     
-    # Build ngtcp2
     print_status "Step 3/3: Building ngtcp2 for iOS..."
     if [ -f "./build-ngtcp2.sh" ]; then
-        ./build-ngtcp2.sh --quictls || {
-            print_error "Failed to build ngtcp2 for iOS"
-            return 1
-        }
+        if [ "$USE_WOLFSSL" = "1" ]; then
+            ./build-ngtcp2.sh --wolfssl-path ./install/wolfssl-ios || {
+                print_error "Failed to build ngtcp2 for iOS"
+                return 1
+            }
+        else
+            ./build-ngtcp2.sh --quictls || {
+                print_error "Failed to build ngtcp2 for iOS"
+                return 1
+            }
+        fi
         print_success "ngtcp2 built for iOS"
     else
         print_error "build-ngtcp2.sh not found in ios/"
@@ -145,9 +173,14 @@ build_ios() {
     print_success "All iOS libraries built successfully!"
 }
 
-# Build Android libraries
+# Build Android libraries (WolfSSL or QuicTLS → nghttp3 → ngtcp2)
 build_android() {
-    print_status "Building Android libraries (OpenSSL → nghttp3 → ngtcp2)..."
+    USE_WOLFSSL="${USE_WOLFSSL:-1}"
+    if [ "$USE_WOLFSSL" = "1" ]; then
+        print_status "Building Android libraries (WolfSSL → nghttp3 → ngtcp2)..."
+    else
+        print_status "Building Android libraries (OpenSSL/QuicTLS → nghttp3 → ngtcp2)..."
+    fi
     
     if ! check_android_sdk; then
         return 1
@@ -156,33 +189,43 @@ build_android() {
     ANDROID_NDK=$(detect_ndk)
     if [ -z "$ANDROID_NDK" ]; then
         print_error "Android NDK not found. Install NDK via Android Studio (SDK Manager → NDK)."
-        print_error "Expected: \$ANDROID_HOME/ndk/<version>/build/cmake/android.toolchain.cmake"
         return 1
     fi
     print_status "Using NDK: $ANDROID_NDK"
     
     export PROJECT_DIR="$PROJECT_DIR"
     export ANDROID_NDK="$ANDROID_NDK"
-    
-    # Default ABI (can be overridden via --abi)
+    export USE_WOLFSSL="$USE_WOLFSSL"
     ANDROID_ABI="${ANDROID_ABI:-arm64-v8a}"
     ANDROID_PLATFORM="${ANDROID_PLATFORM:-android-21}"
-    
-    # Build OpenSSL (quictls)
-    print_status "Step 1/3: Building OpenSSL (quictls) for Android ($ANDROID_ABI)..."
     cd "$PROJECT_DIR/android"
-    if [ -f "./build-openssl.sh" ]; then
-        ./build-openssl.sh --ndk-path "$ANDROID_NDK" --abi "$ANDROID_ABI" --platform "$ANDROID_PLATFORM" --quictls || {
-            print_error "Failed to build OpenSSL for Android"
+    
+    if [ "$USE_WOLFSSL" = "1" ]; then
+        print_status "Step 1/3: Building WolfSSL (TLS 1.3 + QUIC) for Android ($ANDROID_ABI)..."
+        if [ -f "./build-wolfssl.sh" ]; then
+            ./build-wolfssl.sh --ndk-path "$ANDROID_NDK" --abi "$ANDROID_ABI" --platform "$ANDROID_PLATFORM" || {
+                print_error "Failed to build WolfSSL for Android"
+                return 1
+            }
+            print_success "WolfSSL built for Android ($ANDROID_ABI)"
+        else
+            print_error "build-wolfssl.sh not found in android/"
             return 1
-        }
-        print_success "OpenSSL (quictls) built for Android ($ANDROID_ABI)"
+        fi
     else
-        print_error "build-openssl.sh not found in android/"
-        return 1
+        print_status "Step 1/3: Building OpenSSL (quictls) for Android ($ANDROID_ABI)..."
+        if [ -f "./build-openssl.sh" ]; then
+            ./build-openssl.sh --ndk-path "$ANDROID_NDK" --abi "$ANDROID_ABI" --platform "$ANDROID_PLATFORM" --quictls || {
+                print_error "Failed to build OpenSSL for Android"
+                return 1
+            }
+            print_success "OpenSSL (quictls) built for Android ($ANDROID_ABI)"
+        else
+            print_error "build-openssl.sh not found in android/"
+            return 1
+        fi
     fi
     
-    # Build nghttp3
     print_status "Step 2/3: Building nghttp3 for Android ($ANDROID_ABI)..."
     if [ -f "./build-nghttp3.sh" ]; then
         ./build-nghttp3.sh --ndk-path "$ANDROID_NDK" --abi "$ANDROID_ABI" --platform "$ANDROID_PLATFORM" || {
@@ -195,13 +238,19 @@ build_android() {
         return 1
     fi
     
-    # Build ngtcp2
     print_status "Step 3/3: Building ngtcp2 for Android ($ANDROID_ABI)..."
     if [ -f "./build-ngtcp2.sh" ]; then
-        ./build-ngtcp2.sh --ndk-path "$ANDROID_NDK" --abi "$ANDROID_ABI" --platform "$ANDROID_PLATFORM" --quictls || {
-            print_error "Failed to build ngtcp2 for Android"
-            return 1
-        }
+        if [ "$USE_WOLFSSL" = "1" ]; then
+            ./build-ngtcp2.sh --ndk-path "$ANDROID_NDK" --abi "$ANDROID_ABI" --platform "$ANDROID_PLATFORM" --wolfssl-path ./install/wolfssl-android || {
+                print_error "Failed to build ngtcp2 for Android"
+                return 1
+            }
+        else
+            ./build-ngtcp2.sh --ndk-path "$ANDROID_NDK" --abi "$ANDROID_ABI" --platform "$ANDROID_PLATFORM" --quictls || {
+                print_error "Failed to build ngtcp2 for Android"
+                return 1
+            }
+        fi
         print_success "ngtcp2 built for Android ($ANDROID_ABI)"
     else
         print_error "build-ngtcp2.sh not found in android/"

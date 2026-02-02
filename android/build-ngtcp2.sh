@@ -1,18 +1,15 @@
 #!/bin/bash
 #
 # Build script for ngtcp2 on Android
-#
-# This script builds ngtcp2 as a native library for Android using NDK.
-# It requires:
-# - Android NDK r25+
-# - CMake 3.20+
-# - OpenSSL 3.0+ (built for Android)
+# Builds ngtcp2 as a native library for Android using NDK.
+# Default TLS backend: WolfSSL (TLS 1.3 + QUIC). Set USE_WOLFSSL=0 or use --openssl-path for QuicTLS.
+# Requires: Android NDK r25+, CMake 3.20+, and WolfSSL or OpenSSL/QuicTLS built for Android.
 #
 # Usage:
-#   ./build-ngtcp2.sh [--ndk-path PATH] [--abi ABI] [--platform PLATFORM] [--openssl-path PATH] [--prefix PATH] [--quictls]
+#   ./build-ngtcp2.sh [--wolfssl-path PATH] [--openssl-path PATH] [--ndk-path PATH] [--abi ABI] [--platform PLATFORM]
 #
-# Example:
-#   ./build-ngtcp2.sh --ndk-path ~/Android/Sdk/ndk/25.2.9519653 --abi arm64-v8a --platform android-21
+# Example (default WolfSSL): ./build-ngtcp2.sh   # uses install/wolfssl-android when USE_WOLFSSL=1
+# Example (QuicTLS): ./build-ngtcp2.sh --openssl-path ./install/openssl-android --quictls
 #
 
 set -e
@@ -23,12 +20,15 @@ if [ -z "$PROJECT_DIR" ]; then
     PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 fi
 DEPS_DIR="${PROJECT_DIR}/deps"
+[ -f "$PROJECT_DIR/deps-versions.sh" ] && . "$PROJECT_DIR/deps-versions.sh"
 ANDROID_NDK="${ANDROID_NDK:-}"
 ANDROID_ABI="${ANDROID_ABI:-arm64-v8a}"
 ANDROID_PLATFORM="${ANDROID_PLATFORM:-android-21}"
 BUILD_TYPE="${BUILD_TYPE:-Release}"
+WOLFSSL_PATH="${WOLFSSL_PATH:-}"
 OPENSSL_PATH="${OPENSSL_PATH:-}"
-USE_QUICTLS="${USE_QUICTLS:-0}"
+USE_WOLFSSL="${USE_WOLFSSL:-1}"
+USE_QUICTLS="${USE_QUICTLS:-1}"
 INSTALL_PREFIX="${INSTALL_PREFIX:-$SCRIPT_DIR/install/ngtcp2-android}"
 
 # Parse arguments
@@ -50,6 +50,11 @@ while [[ $# -gt 0 ]]; do
             BUILD_TYPE="$2"
             shift 2
             ;;
+        --wolfssl-path)
+            WOLFSSL_PATH="$2"
+            USE_WOLFSSL=1
+            shift 2
+            ;;
         --openssl-path)
             OPENSSL_PATH="$2"
             shift 2
@@ -60,11 +65,12 @@ while [[ $# -gt 0 ]]; do
             ;;
         --quictls)
             USE_QUICTLS=1
+            USE_WOLFSSL=0
             shift
             ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--ndk-path PATH] [--abi ABI] [--platform PLATFORM] [--openssl-path PATH] [--prefix PATH] [--quictls]"
+            echo "Usage: $0 [--wolfssl-path PATH] [--openssl-path PATH] [--ndk-path PATH] [--abi ABI] [--platform PLATFORM] [--quictls]"
             exit 1
             ;;
     esac
@@ -114,17 +120,25 @@ if [[ "$INSTALL_PREFIX" != *"/$ANDROID_ABI" ]]; then
 fi
 echo "  Install Prefix: $INSTALL_PREFIX"
 
-# Resolve ngtcp2 source dir (default: deps/ngtcp2)
+# Resolve ngtcp2 source dir (default: deps/ngtcp2); URL from deps-versions.sh / ref-code/VERSION.txt
 NGTCP2_SOURCE_DIR="${NGTCP2_SOURCE_DIR:-${DEPS_DIR}/ngtcp2}"
 if [[ "$NGTCP2_SOURCE_DIR" != /* ]]; then
     NGTCP2_SOURCE_DIR="${DEPS_DIR}/$NGTCP2_SOURCE_DIR"
 fi
+NGTCP2_REPO_URL="${NGTCP2_REPO_URL:-https://github.com/ngtcp2/ngtcp2.git}"
 # Clone ngtcp2 if missing
 if [ ! -d "$NGTCP2_SOURCE_DIR" ]; then
     echo "ngtcp2 source not found. Cloning into $NGTCP2_SOURCE_DIR ..."
     mkdir -p "$DEPS_DIR"
-    git clone --recurse-submodules https://github.com/ngtcp2/ngtcp2.git "$NGTCP2_SOURCE_DIR" || {
+    git clone --recurse-submodules "$NGTCP2_REPO_URL" "$NGTCP2_SOURCE_DIR" || {
         echo "Error: Failed to clone ngtcp2"
+        exit 1
+    }
+fi
+if [ -n "$NGTCP2_COMMIT" ] && [ -d "$NGTCP2_SOURCE_DIR/.git" ]; then
+    echo "Pinning ngtcp2 to commit $NGTCP2_COMMIT"
+    (cd "$NGTCP2_SOURCE_DIR" && git fetch origin "$NGTCP2_COMMIT" 2>/dev/null; git checkout "$NGTCP2_COMMIT") || {
+        echo "Error: Failed to checkout ngtcp2 commit $NGTCP2_COMMIT"
         exit 1
     }
 fi
@@ -140,16 +154,29 @@ if [ ! -f "$NGTCP2_SOURCE_DIR/munit/munit.c" ]; then
     else
         echo "Warning: ngtcp2 submodules are missing (munit)"
         echo "Tests will be disabled, but if configuration still fails, clone with submodules:"
-        echo "  git clone --recurse-submodules https://github.com/ngtcp2/ngtcp2.git $NGTCP2_SOURCE_DIR"
+        echo "  git clone --recurse-submodules $NGTCP2_REPO_URL $NGTCP2_SOURCE_DIR"
     fi
 fi
 
-# Check OpenSSL
-if [ -z "$OPENSSL_PATH" ]; then
-    echo "Warning: OpenSSL path not specified. ngtcp2 will be built without TLS support."
-    echo "To build with OpenSSL, use: --openssl-path /path/to/openssl-android"
-    echo ""
-    echo "You can build OpenSSL for Android using build-openssl.sh"
+# Prefer WolfSSL when USE_WOLFSSL=1
+if [ "$USE_WOLFSSL" = "1" ] && [ -z "$WOLFSSL_PATH" ]; then
+    if [ -d "$SCRIPT_DIR/install/wolfssl-android/$ANDROID_ABI" ]; then
+        WOLFSSL_PATH="$SCRIPT_DIR/install/wolfssl-android/$ANDROID_ABI"
+    elif [ -d "$SCRIPT_DIR/install/wolfssl-android" ]; then
+        WOLFSSL_PATH="$SCRIPT_DIR/install/wolfssl-android"
+    fi
+fi
+if [ -z "$WOLFSSL_PATH" ] && [ -z "$OPENSSL_PATH" ]; then
+    if [ -d "$SCRIPT_DIR/install/openssl-android/$ANDROID_ABI" ]; then
+        OPENSSL_PATH="$SCRIPT_DIR/install/openssl-android/$ANDROID_ABI"
+    elif [ -d "$SCRIPT_DIR/install/openssl-android" ]; then
+        OPENSSL_PATH="$SCRIPT_DIR/install/openssl-android"
+    fi
+fi
+if [ -z "$WOLFSSL_PATH" ] && [ -z "$OPENSSL_PATH" ]; then
+    echo "Warning: No TLS path. Build WolfSSL or OpenSSL first."
+    echo "  WolfSSL: ./build-wolfssl.sh  then  ./build-ngtcp2.sh --wolfssl-path ./install/wolfssl-android"
+    echo "  QuicTLS: ./build-openssl.sh  then  ./build-ngtcp2.sh --openssl-path ./install/openssl-android --quictls"
 fi
 
 # Create build directory
@@ -180,6 +207,23 @@ CMAKE_ARGS=(
     -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX"
 )
 
+if [ -n "$WOLFSSL_PATH" ]; then
+    if [[ "$WOLFSSL_PATH" != /* ]]; then
+        [ -d "$SCRIPT_DIR/$WOLFSSL_PATH" ] && WOLFSSL_PATH="$SCRIPT_DIR/$WOLFSSL_PATH"
+        [ -d "$DEPS_DIR/$WOLFSSL_PATH" ] && WOLFSSL_PATH="$DEPS_DIR/$WOLFSSL_PATH"
+    fi
+    [ -d "$WOLFSSL_PATH/$ANDROID_ABI" ] && WOLFSSL_PATH="$WOLFSSL_PATH/$ANDROID_ABI"
+    WOLFSSL_PATH="$(cd "$WOLFSSL_PATH" 2>/dev/null && pwd)" || true
+    if [ -d "$WOLFSSL_PATH" ] && [ -f "$WOLFSSL_PATH/lib/libwolfssl.a" ]; then
+        CMAKE_ARGS+=(
+            -DENABLE_WOLFSSL=ON
+            -DENABLE_OPENSSL=OFF
+            -DWOLFSSL_INCLUDE_DIR="$WOLFSSL_PATH/include"
+            -DWOLFSSL_LIBRARY="$WOLFSSL_PATH/lib/libwolfssl.a"
+        )
+    fi
+fi
+if [ -z "$WOLFSSL_PATH" ] || [ ! -f "$WOLFSSL_PATH/lib/libwolfssl.a" ]; then
 if [ -n "$OPENSSL_PATH" ]; then
     if [[ "$OPENSSL_PATH" != /* ]]; then
         if [ -d "$SCRIPT_DIR/$OPENSSL_PATH" ]; then
@@ -188,10 +232,7 @@ if [ -n "$OPENSSL_PATH" ]; then
             OPENSSL_PATH="$DEPS_DIR/$OPENSSL_PATH"
         fi
     fi
-    # If ABI-aware install exists, prefer it
-    if [ -d "$OPENSSL_PATH/$ANDROID_ABI" ]; then
-        OPENSSL_PATH="$OPENSSL_PATH/$ANDROID_ABI"
-    fi
+    [ -d "$OPENSSL_PATH/$ANDROID_ABI" ] && OPENSSL_PATH="$OPENSSL_PATH/$ANDROID_ABI"
     if [ ! -d "$OPENSSL_PATH" ]; then
         echo "Error: OpenSSL path does not exist: $OPENSSL_PATH"
         exit 1
@@ -206,43 +247,15 @@ if [ -n "$OPENSSL_PATH" ]; then
         echo "Error: OpenSSL static libraries not found in $OPENSSL_LIB_DIR"
         exit 1
     fi
-    if [ ! -d "$OPENSSL_INCLUDE_DIR" ]; then
-        echo "Error: OpenSSL include directory not found: $OPENSSL_INCLUDE_DIR"
-        exit 1
-    fi
-
     if [ "$USE_QUICTLS" = "1" ]; then
         if ! grep -q "SSL_provide_quic_data" "$OPENSSL_INCLUDE_DIR/openssl/ssl.h" 2>/dev/null; then
-            echo "OpenSSL headers at $OPENSSL_INCLUDE_DIR do not include QUIC APIs."
-            if [ -x "$SCRIPT_DIR/build-openssl.sh" ]; then
-                echo "Attempting to rebuild OpenSSL via build-openssl.sh..."
-                OPENSSL_PREFIX="$OPENSSL_PATH"
-                if [[ "$OPENSSL_PREFIX" == *"/$ANDROID_ABI" ]]; then
-                    OPENSSL_PREFIX="${OPENSSL_PREFIX%/$ANDROID_ABI}"
-                fi
-                "$SCRIPT_DIR/build-openssl.sh" \
-                    --ndk-path "$ANDROID_NDK" \
-                    --abi "$ANDROID_ABI" \
-                    --platform "$ANDROID_PLATFORM" \
-                    --quictls \
-                    --prefix "$OPENSSL_PREFIX" || {
-                    echo "Error: OpenSSL rebuild failed."
-                    exit 1
-                }
-                if ! grep -q "SSL_provide_quic_data" "$OPENSSL_INCLUDE_DIR/openssl/ssl.h" 2>/dev/null; then
-                    echo "Error: OpenSSL headers at $OPENSSL_INCLUDE_DIR still do not include QUIC APIs."
-                    echo "Ensure OPENSSL_SOURCE_DIR points to a quictls checkout."
-                    exit 1
-                fi
-            else
-                echo "Error: OpenSSL headers at $OPENSSL_INCLUDE_DIR do not include QUIC APIs."
-                echo "Rebuild OpenSSL with --quictls and ensure OPENSSL_SOURCE_DIR points to quictls."
-                exit 1
-            fi
+            echo "Error: OpenSSL at $OPENSSL_INCLUDE_DIR does not include QUIC APIs (use QuicTLS)."
+            exit 1
         fi
     fi
 
     CMAKE_ARGS+=(
+        -DENABLE_WOLFSSL=OFF
         -DENABLE_OPENSSL=ON
         -DOPENSSL_ROOT_DIR="$OPENSSL_PATH"
         -DOPENSSL_INCLUDE_DIR="$OPENSSL_INCLUDE_DIR"
@@ -250,18 +263,10 @@ if [ -n "$OPENSSL_PATH" ]; then
         -DOPENSSL_SSL_LIBRARY="$OPENSSL_SSL_LIB"
         -DOPENSSL_LIBRARIES="$OPENSSL_SSL_LIB;$OPENSSL_CRYPTO_LIB"
     )
-
-    if [ "$USE_QUICTLS" = "1" ]; then
-        CMAKE_ARGS+=(
-            -DENABLE_QUICTLS=ON
-            -DHAVE_SSL_PROVIDE_QUIC_DATA=1
-            -DHAVE_SSL_SET_QUIC_TLS_CBS=0
-        )
-    fi
+    [ "$USE_QUICTLS" = "1" ] && CMAKE_ARGS+=( -DENABLE_QUICTLS=ON -DHAVE_SSL_PROVIDE_QUIC_DATA=1 -DHAVE_SSL_SET_QUIC_TLS_CBS=0 )
 else
-    CMAKE_ARGS+=(
-        -DENABLE_OPENSSL=OFF
-    )
+    CMAKE_ARGS+=( -DENABLE_WOLFSSL=OFF -DENABLE_OPENSSL=OFF )
+fi
 fi
 
 echo ""
