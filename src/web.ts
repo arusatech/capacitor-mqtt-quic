@@ -1,6 +1,7 @@
 import mqtt, { type MqttClient, type IClientOptions, type IClientPublishOptions } from 'mqtt';
 import type {
   MqttQuicConnectOptions,
+  MqttQuicPingOptions,
   MqttQuicPublishOptions,
   MqttQuicSubscribeOptions,
   MqttQuicTestHarnessOptions,
@@ -13,6 +14,11 @@ import type {
 export class MqttQuicWeb {
   private client: MqttClient | null = null;
   private protocol: 'ws' | 'wss' = 'wss';
+
+  /** Web: no UDP; resolves ok if host looks valid. Native uses UDP reachability check. */
+  async ping(_options: MqttQuicPingOptions): Promise<{ ok: boolean }> {
+    return Promise.resolve({ ok: true });
+  }
 
   async connect(options: MqttQuicConnectOptions): Promise<{ connected: boolean }> {
     return new Promise((resolve, reject) => {
@@ -167,7 +173,7 @@ export class MqttQuicWeb {
   async testHarness(options: MqttQuicTestHarnessOptions): Promise<{ success: boolean }> {
     const host = options.host;
     const port = options.port ?? 1884;
-    const clientId = options.clientId ?? 'mqttquic_test_client';
+    const clientId = options.clientId ?? 'AcharyaAnnadata';
     const topic = options.topic ?? 'test/topic';
     const payload = options.payload ?? 'Hello QUIC!';
 

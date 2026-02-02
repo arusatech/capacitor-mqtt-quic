@@ -24,6 +24,9 @@ int ngtcp2_client_close(NGTCP2ClientHandle handle);
 int ngtcp2_client_is_connected(NGTCP2ClientHandle handle);
 const char *ngtcp2_client_last_error(NGTCP2ClientHandle handle);
 
+/** UDP reachability check to host:port (e.g. MQTT/QUIC server). Returns 0 on success, -1 on failure. */
+int ngtcp2_ping_server(const char *host, uint16_t port);
+
 #ifdef __cplusplus
 }
 #endif

@@ -14,6 +14,7 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "MqttQuicPlugin"
     public let jsName = "MqttQuic"
     public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "ping", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "connect", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "disconnect", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "publish", returnType: CAPPluginReturnPromise),
@@ -25,6 +26,20 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
     private var client = MQTTClient(protocolVersion: .auto)
 
     @objc override public func load() {}
+
+    @objc func ping(_ call: CAPPluginCall) {
+        let host = call.getString("host") ?? ""
+        let port = call.getInt("port") ?? 1884
+        guard !host.isEmpty else {
+            call.reject("host is required")
+            return
+        }
+        if NGTCP2Client.ping(host: host, port: UInt16(port)) {
+            call.resolve(["ok": true])
+        } else {
+            call.reject("Server unreachable (UDP ping to \(host):\(port) failed)")
+        }
+    }
 
     private func bundledCaPath() -> String? {
         let bundle = Bundle(for: MqttQuicPlugin.self)
@@ -77,6 +92,10 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
                 } else {
                     unsetenv("MQTT_QUIC_CA_PATH")
                 }
+                if !NGTCP2Client.ping(host: host, port: UInt16(port)) {
+                    call.reject("Server unreachable (UDP ping to \(host):\(port) failed). Check network and firewall.")
+                    return
+                }
                 if case .connected = client.getState() {
                     try? await client.disconnect()
                 }
@@ -101,7 +120,7 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func testHarness(_ call: CAPPluginCall) {
         let host = call.getString("host") ?? ""
         let port = call.getInt("port") ?? 1884
-        let clientId = call.getString("clientId") ?? "mqttquic_test_client"
+        let clientId = call.getString("clientId") ?? "AcharyaAnnadata"
         let topic = call.getString("topic") ?? "test/topic"
         let payload = call.getString("payload") ?? "Hello QUIC!"
         let caFile = call.getString("caFile")

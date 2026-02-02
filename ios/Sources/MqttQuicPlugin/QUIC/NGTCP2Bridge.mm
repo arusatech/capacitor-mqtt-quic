@@ -407,9 +407,16 @@ class QuicClient {
     settings.handshake_timeout = 10 * NGTCP2_SECONDS;
 
     ngtcp2_transport_params_default(&params);
+    /* Set all transport params explicitly so server validation passes (active_connection_id_limit>=2, max_ack_delay in range). Use non-default values so they are encoded on the wire. */
     params.initial_max_streams_bidi = 8;
+    params.initial_max_streams_uni = 8;
     params.initial_max_stream_data_bidi_local = 256 * 1024;
+    params.initial_max_stream_data_bidi_remote = 256 * 1024;
+    params.initial_max_stream_data_uni = 256 * 1024;
     params.initial_max_data = 1024 * 1024;
+    params.active_connection_id_limit = 8;
+    params.max_ack_delay = 1 * NGTCP2_MILLISECONDS;
+    params.max_idle_timeout = 30 * NGTCP2_SECONDS;
 
     ngtcp2_cid dcid, scid;
     dcid.datalen = NGTCP2_MIN_INITIAL_DCIDLEN;
@@ -890,6 +897,43 @@ const char *ngtcp2_client_last_error(NGTCP2ClientHandle handle) {
   }
   auto *client = static_cast<QuicClient *>(handle);
   return client->last_error();
+}
+
+int ngtcp2_ping_server(const char *host, uint16_t port) {
+  if (!host) {
+    return -1;
+  }
+  struct addrinfo hints;
+  struct addrinfo *res = nullptr;
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_socktype = SOCK_DGRAM;
+  hints.ai_family = AF_UNSPEC;
+
+  char port_str[16];
+  snprintf(port_str, sizeof(port_str), "%u", port);
+  int rv = getaddrinfo(host, port_str, &hints, &res);
+  if (rv != 0 || !res) {
+    return -1;
+  }
+
+  int fd = -1;
+  for (struct addrinfo *rp = res; rp; rp = rp->ai_next) {
+    fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+    if (fd == -1) {
+      continue;
+    }
+    if (::connect(fd, rp->ai_addr, rp->ai_addrlen) == 0) {
+      break;
+    }
+    ::close(fd);
+    fd = -1;
+  }
+  freeaddrinfo(res);
+  if (fd == -1) {
+    return -1;
+  }
+  ::close(fd);
+  return 0;
 }
 
 }  // extern "C"

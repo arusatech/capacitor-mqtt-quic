@@ -390,9 +390,16 @@ class QuicClient {
     settings.handshake_timeout = 10 * NGTCP2_SECONDS;
 
     ngtcp2_transport_params_default(&params);
+    /* Set all transport params explicitly so server validation passes (active_connection_id_limit>=2, max_ack_delay in range). Use non-default values so they are encoded on the wire. */
     params.initial_max_streams_bidi = 8;
+    params.initial_max_streams_uni = 8;
     params.initial_max_stream_data_bidi_local = 256 * 1024;
+    params.initial_max_stream_data_bidi_remote = 256 * 1024;
+    params.initial_max_stream_data_uni = 256 * 1024;
     params.initial_max_data = 1024 * 1024;
+    params.active_connection_id_limit = 8;
+    params.max_ack_delay = 1 * NGTCP2_MILLISECONDS;
+    params.max_idle_timeout = 30 * NGTCP2_SECONDS;
 
     ngtcp2_cid dcid, scid;
     dcid.datalen = NGTCP2_MIN_INITIAL_DCIDLEN;

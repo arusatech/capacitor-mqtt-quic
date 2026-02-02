@@ -130,6 +130,22 @@ cd ios
 
 This merges `libs/*.a` into a single static library and creates `Libs/MqttQuicLibs.xcframework`. The app can then resolve the MqttQuicPlugin package and link the native plugin. Without this step, SPM will fail to resolve the plugin (binary target missing).
 
+### Server returns -225 (NGTCP2_ERR_TRANSPORT_PARAM) and “Decoded client transport params: (NULL)”
+
+That indicates a **client/server ngtcp2 version mismatch**. Rebuild the client’s ngtcp2 and xcframework using the **same** ngtcp2 version (same git tag/commit) as the server’s libngtcp2:
+
+```bash
+# From plugin root (ref-code/capacitor-mqtt-quic)
+cd ios
+# Use the same ngtcp2 version as the server (e.g. v1.2.0 or the server’s commit)
+NGTCP2_SOURCE_DIR="${PWD}/../deps/ngtcp2"  # or set to your ngtcp2 clone
+[ -d "$NGTCP2_SOURCE_DIR" ] && (cd "$NGTCP2_SOURCE_DIR" && git fetch && git checkout v1.2.0)  # replace with server’s version
+./build-ngtcp2.sh --openssl-path /path/to/openssl-ios  # your usual args
+./create-xcframework.sh
+```
+
+Then clean and rebuild the iOS app so it links the new xcframework. See the app’s `CONNECT_TROUBLESHOOTING.md` (section 5) for more detail.
+
 ---
 
 ## Integration into Xcode Project

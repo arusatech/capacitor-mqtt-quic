@@ -52,6 +52,13 @@ public final class NGTCP2Client: QuicClientProtocol {
         }
     }
     
+    /// UDP reachability check to host:port (e.g. MQTT/QUIC server). Call before connect to fail fast if unreachable.
+    public static func ping(host: String, port: UInt16) -> Bool {
+        host.withCString { hostPtr in
+            ngtcp2_ping_server(hostPtr, port) == 0
+        }
+    }
+
     // MARK: - QuicClientProtocol Implementation
     
     public func connect(host: String, port: UInt16) async throws {

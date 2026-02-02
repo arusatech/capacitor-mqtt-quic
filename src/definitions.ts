@@ -49,7 +49,13 @@ export interface MqttQuicTestHarnessOptions {
   caPath?: string;
 }
 
+export interface MqttQuicPingOptions {
+  host: string;
+  port?: number;
+}
+
 export interface MqttQuicPlugin {
+  ping(options: MqttQuicPingOptions): Promise<{ ok: boolean }>;
   connect(options: MqttQuicConnectOptions): Promise<{ connected: boolean }>;
   disconnect(): Promise<void>;
   publish(options: MqttQuicPublishOptions): Promise<{ success: boolean }>;
