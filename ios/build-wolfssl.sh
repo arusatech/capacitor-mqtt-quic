@@ -22,13 +22,8 @@ WOLFSSL_SOURCE_DIR="${WOLFSSL_SOURCE_DIR:-$DEPS_DIR/wolfssl}"
 ARCH="${ARCH:-arm64}"
 SDK="${SDK:-iphoneos}"
 IOS_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET:-15.0}"
-if [ "$SDK" = "iphonesimulator" ]; then
-    INSTALL_PREFIX="${INSTALL_PREFIX:-$SCRIPT_DIR/install/wolfssl-ios-simulator}"
-    LIBS_DIR="${LIBS_DIR:-$SCRIPT_DIR/libs-simulator}"
-else
-    INSTALL_PREFIX="${INSTALL_PREFIX:-$SCRIPT_DIR/install/wolfssl-ios}"
-    LIBS_DIR="${LIBS_DIR:-$SCRIPT_DIR/libs}"
-fi
+INSTALL_PREFIX="${INSTALL_PREFIX:-}"
+LIBS_DIR="${LIBS_DIR:-}"
 INCLUDE_DIR="${SCRIPT_DIR}/include"
 
 while [[ $# -gt 0 ]]; do
@@ -40,6 +35,15 @@ while [[ $# -gt 0 ]]; do
         *) echo "Unknown option: $1"; exit 1 ;;
     esac
 done
+
+# Set install/libs dirs from SDK after parsing args (simulator must not overwrite device)
+if [ "$SDK" = "iphonesimulator" ]; then
+    INSTALL_PREFIX="${INSTALL_PREFIX:-$SCRIPT_DIR/install/wolfssl-ios-simulator}"
+    LIBS_DIR="${LIBS_DIR:-$SCRIPT_DIR/libs-simulator}"
+else
+    INSTALL_PREFIX="${INSTALL_PREFIX:-$SCRIPT_DIR/install/wolfssl-ios}"
+    LIBS_DIR="${LIBS_DIR:-$SCRIPT_DIR/libs}"
+fi
 
 if ! command -v xcrun &> /dev/null; then
     echo "Error: Xcode command line tools required"
@@ -93,9 +97,15 @@ fi
 [ ! -f ./configure ] && { echo "Error: configure not found"; exit 1; }
 
 export CC="$(xcrun --sdk "$SDK" --find clang)"
-export CFLAGS="-arch $ARCH -isysroot $IOS_SDK_PATH -mios-version-min=$IOS_DEPLOYMENT_TARGET -fno-common"
-export CPPFLAGS="-arch $ARCH -isysroot $IOS_SDK_PATH -mios-version-min=$IOS_DEPLOYMENT_TARGET"
-export LDFLAGS="-arch $ARCH -isysroot $IOS_SDK_PATH -mios-version-min=$IOS_DEPLOYMENT_TARGET"
+# Use -mios-simulator-version-min for simulator so Mach-O gets platform 7 (iOS Simulator), not platform 2 (iOS device)
+if [ "$SDK" = "iphonesimulator" ]; then
+    VERSION_MIN="-mios-simulator-version-min=$IOS_DEPLOYMENT_TARGET"
+else
+    VERSION_MIN="-mios-version-min=$IOS_DEPLOYMENT_TARGET"
+fi
+export CFLAGS="-arch $ARCH -isysroot $IOS_SDK_PATH $VERSION_MIN -fno-common"
+export CPPFLAGS="-arch $ARCH -isysroot $IOS_SDK_PATH $VERSION_MIN"
+export LDFLAGS="-arch $ARCH -isysroot $IOS_SDK_PATH $VERSION_MIN"
 
 WOLFSSL_CONFIGURE_QUIC=""
 [ "$ENABLE_QUIC" = "1" ] && WOLFSSL_CONFIGURE_QUIC="--enable-quic"

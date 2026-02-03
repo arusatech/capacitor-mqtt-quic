@@ -19,10 +19,9 @@ Pod::Spec.new do |s|
   s.swift_version = '5.1'
   s.vendored_libraries = [
     'ios/libs/libngtcp2.a',
-    'ios/libs/libngtcp2_crypto_quictls.a',
+    'ios/libs/libngtcp2_crypto_wolfssl.a',
     'ios/libs/libnghttp3.a',
-    'ios/libs/libssl.a',
-    'ios/libs/libcrypto.a'
+    'ios/libs/libwolfssl.a'
   ]
   s.public_header_files = 'ios/Sources/**/*.h', 'ios/include/**/*.h'
   s.private_header_files = 'ios/Sources/**/*.h', 'ios/include/**/*.h'
@@ -30,8 +29,8 @@ Pod::Spec.new do |s|
   # Use QuicClientStub for now (in-memory mock). Enable NGTCP2_ENABLED + NGHTTP3_ENABLED
   # and add Swift-C bridge for NGTCP2Client when native QUIC is needed.
   s.pod_target_xcconfig = {
-    'HEADER_SEARCH_PATHS' => '$(PODS_ROOT)/AnnadataCapacitorMqttQuic/ios/include/ngtcp2 $(PODS_ROOT)/AnnadataCapacitorMqttQuic/ios/include/nghttp3 $(PODS_ROOT)/AnnadataCapacitorMqttQuic/ios/include/openssl',
+    'HEADER_SEARCH_PATHS' => '$(PODS_ROOT)/AnnadataCapacitorMqttQuic/ios/include/ngtcp2 $(PODS_ROOT)/AnnadataCapacitorMqttQuic/ios/include/nghttp3 $(PODS_ROOT)/AnnadataCapacitorMqttQuic/ios/include/wolfssl',
     'LIBRARY_SEARCH_PATHS' => '$(PODS_ROOT)/AnnadataCapacitorMqttQuic/ios/libs',
-    'OTHER_LDFLAGS' => '-lngtcp2 -lngtcp2_crypto_quictls -lnghttp3 -lssl -lcrypto'
+    'OTHER_LDFLAGS' => '-lngtcp2 -lngtcp2_crypto_wolfssl -lnghttp3 -lwolfssl'
   }
 end

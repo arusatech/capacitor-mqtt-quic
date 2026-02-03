@@ -2,11 +2,9 @@
 
 #include <ngtcp2/ngtcp2.h>
 #include <ngtcp2/ngtcp2_crypto.h>
-#include <ngtcp2/ngtcp2_crypto_quictls.h>
+#include <ngtcp2/ngtcp2_crypto_wolfssl.h>
 
-#include <openssl/ssl.h>
-#include <openssl/rand.h>
-#include <openssl/err.h>
+#include <wolfssl/ssl.h>
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -317,39 +315,36 @@ class QuicClient {
   }
 
   int init_tls(const std::string &host, const std::string &alpn) {
-    if (ngtcp2_crypto_quictls_init() != 0) {
-      setError("ngtcp2_crypto_quictls_init failed");
-      return -1;
-    }
-    ssl_ctx_ = SSL_CTX_new(TLS_client_method());
+    /* WolfSSL backend: use wolfSSL_* names so we link against libwolfssl, not OpenSSL. */
+    ssl_ctx_ = wolfSSL_CTX_new(wolfTLS_client_method());
     if (!ssl_ctx_) {
-      setError("SSL_CTX_new failed");
+      setError("wolfSSL_CTX_new failed");
       return -1;
     }
-    if (ngtcp2_crypto_quictls_configure_client_context(ssl_ctx_) != 0) {
-      setError("ngtcp2_crypto_quictls_configure_client_context failed");
+    if (ngtcp2_crypto_wolfssl_configure_client_context(ssl_ctx_) != 0) {
+      setError("ngtcp2_crypto_wolfssl_configure_client_context failed");
       return -1;
     }
-    SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_PEER, nullptr);
+    wolfSSL_CTX_set_verify(ssl_ctx_, WOLFSSL_VERIFY_PEER, nullptr);
 
-    ssl_ = SSL_new(ssl_ctx_);
+    ssl_ = wolfSSL_new(ssl_ctx_);
     if (!ssl_) {
-      setError("SSL_new failed");
+      setError("wolfSSL_new failed");
       return -1;
     }
-    SSL_set_app_data(ssl_, &conn_ref_);
-    SSL_set_connect_state(ssl_);
+    wolfSSL_set_app_data(ssl_, &conn_ref_);
+    wolfSSL_set_connect_state(ssl_);
 
     std::string alpn_vec;
     alpn_vec.push_back(static_cast<char>(alpn.size()));
     alpn_vec.append(alpn);
-    SSL_set_alpn_protos(ssl_,
-                        reinterpret_cast<const unsigned char *>(alpn_vec.data()),
-                        (unsigned int)alpn_vec.size());
-    SSL_set_tlsext_host_name(ssl_, host.c_str());
+    wolfSSL_set_alpn_protos(ssl_,
+                            reinterpret_cast<const unsigned char *>(alpn_vec.data()),
+                            (unsigned int)alpn_vec.size());
+    wolfSSL_set_tlsext_host_name(ssl_, host.c_str());
 
-    if (SSL_set1_host(ssl_, host.c_str()) != 1) {
-      setError("SSL_set1_host failed");
+    if (wolfSSL_set1_host(ssl_, host.c_str()) != 1) {
+      setError("wolfSSL_set1_host failed");
       return -1;
     }
 
@@ -357,14 +352,14 @@ class QuicClient {
     const char *ca_file = std::getenv("MQTT_QUIC_CA_FILE");
     const char *ca_path = std::getenv("MQTT_QUIC_CA_PATH");
     if ((ca_file && ca_file[0] != '\0') || (ca_path && ca_path[0] != '\0')) {
-      if (SSL_CTX_load_verify_locations(ssl_ctx_, ca_file, ca_path) != 1) {
+      if (wolfSSL_CTX_load_verify_locations(ssl_ctx_, ca_file, ca_path) != 1) {
         setError("Failed to load CA bundle from MQTT_QUIC_CA_FILE/CA_PATH");
         return -1;
       }
       ca_loaded = true;
     }
     if (!ca_loaded) {
-      if (SSL_CTX_set_default_verify_paths(ssl_ctx_) == 1) {
+      if (wolfSSL_CTX_set_default_verify_paths(ssl_ctx_) == 1) {
         ca_loaded = true;
       }
     }
@@ -420,13 +415,13 @@ class QuicClient {
 
     ngtcp2_cid dcid, scid;
     dcid.datalen = NGTCP2_MIN_INITIAL_DCIDLEN;
-    if (RAND_bytes(dcid.data, (int)dcid.datalen) != 1) {
-      setError("RAND_bytes failed");
+    if (wolfSSL_RAND_bytes(dcid.data, (int)dcid.datalen) != 1) {
+      setError("wolfSSL_RAND_bytes failed");
       return -1;
     }
     scid.datalen = 8;
-    if (RAND_bytes(scid.data, (int)scid.datalen) != 1) {
-      setError("RAND_bytes failed");
+    if (wolfSSL_RAND_bytes(scid.data, (int)scid.datalen) != 1) {
+      setError("wolfSSL_RAND_bytes failed");
       return -1;
     }
 
@@ -675,11 +670,11 @@ class QuicClient {
       conn_ = nullptr;
     }
     if (ssl_) {
-      SSL_free(ssl_);
+      wolfSSL_free(ssl_);
       ssl_ = nullptr;
     }
     if (ssl_ctx_) {
-      SSL_CTX_free(ssl_ctx_);
+      wolfSSL_CTX_free(ssl_ctx_);
       ssl_ctx_ = nullptr;
     }
     if (fd_ != -1) {
@@ -710,7 +705,7 @@ class QuicClient {
   static void rand_cb(uint8_t *dest, size_t destlen,
                       const ngtcp2_rand_ctx *rand_ctx) {
     (void)rand_ctx;
-    if (RAND_bytes(dest, (int)destlen) != 1) {
+    if (wolfSSL_RAND_bytes(dest, (int)destlen) != 1) {
       abort();
     }
   }
@@ -720,11 +715,11 @@ class QuicClient {
                                       void *user_data) {
     (void)conn;
     (void)user_data;
-    if (RAND_bytes(cid->data, (int)cidlen) != 1) {
+    if (wolfSSL_RAND_bytes(cid->data, (int)cidlen) != 1) {
       return NGTCP2_ERR_CALLBACK_FAILURE;
     }
     cid->datalen = cidlen;
-    if (RAND_bytes(token, NGTCP2_STATELESS_RESET_TOKENLEN) != 1) {
+    if (wolfSSL_RAND_bytes(token, NGTCP2_STATELESS_RESET_TOKENLEN) != 1) {
       return NGTCP2_ERR_CALLBACK_FAILURE;
     }
     return 0;
@@ -792,8 +787,8 @@ class QuicClient {
   struct sockaddr_storage local_addr_;
   socklen_t local_addrlen_;
 
-  SSL_CTX *ssl_ctx_;
-  SSL *ssl_;
+  WOLFSSL_CTX *ssl_ctx_;
+  WOLFSSL *ssl_;
   ngtcp2_conn *conn_;
   ngtcp2_crypto_conn_ref conn_ref_;
   ngtcp2_ccerr last_error_;

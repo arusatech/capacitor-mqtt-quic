@@ -17,6 +17,7 @@ else
 fi
 LIBS_DIR="$IOS_DIR/libs"
 LIBS_SIM_DIR="$IOS_DIR/libs-simulator"
+LIBS_SIM_X86_DIR="$IOS_DIR/libs-simulator-x86_64"
 OUT_DIR="$IOS_DIR/libs"
 XCFRAMEWORK="$OUT_DIR/MqttQuicLibs.xcframework"
 
@@ -70,22 +71,47 @@ if [ -f "$LIBS_SIM_DIR/libngtcp2.a" ] && [ -f "$LIBS_SIM_DIR/libnghttp3.a" ]; th
 fi
 
 if [ "$HAVE_SIMULATOR" = "1" ]; then
-    echo "Merging simulator static libraries..."
-    MERGED_SIM="$OUT_DIR/libmqttquic_native_simulator.a"
-    rm -f "$MERGED_SIM"
+    echo "Merging simulator static libraries (arm64)..."
+    MERGED_SIM_ARM64="$OUT_DIR/libmqttquic_native_simulator_arm64.a"
+    rm -f "$MERGED_SIM_ARM64"
     if [ "$USE_WOLFSSL" = "1" ]; then
-        libtool -static -o "$MERGED_SIM" \
+        libtool -static -o "$MERGED_SIM_ARM64" \
             "$LIBS_SIM_DIR/libngtcp2.a" \
             "$LIBS_SIM_DIR/libngtcp2_crypto_wolfssl.a" \
             "$LIBS_SIM_DIR/libnghttp3.a" \
             "$LIBS_SIM_DIR/libwolfssl.a"
     else
-        libtool -static -o "$MERGED_SIM" \
+        libtool -static -o "$MERGED_SIM_ARM64" \
             "$LIBS_SIM_DIR/libngtcp2.a" \
             "$LIBS_SIM_DIR/libngtcp2_crypto_quictls.a" \
             "$LIBS_SIM_DIR/libnghttp3.a" \
             "$LIBS_SIM_DIR/libssl.a" \
             "$LIBS_SIM_DIR/libcrypto.a"
+    fi
+
+    MERGED_SIM="$MERGED_SIM_ARM64"
+    # If x86_64 simulator libs exist, create a fat simulator library
+    if [ -f "$LIBS_SIM_X86_DIR/libngtcp2.a" ] && [ -f "$LIBS_SIM_X86_DIR/libnghttp3.a" ]; then
+        echo "Merging simulator static libraries (x86_64) and creating fat simulator slice..."
+        MERGED_SIM_X86="$OUT_DIR/libmqttquic_native_simulator_x86_64.a"
+        rm -f "$MERGED_SIM_X86"
+        if [ "$USE_WOLFSSL" = "1" ]; then
+            libtool -static -o "$MERGED_SIM_X86" \
+                "$LIBS_SIM_X86_DIR/libngtcp2.a" \
+                "$LIBS_SIM_X86_DIR/libngtcp2_crypto_wolfssl.a" \
+                "$LIBS_SIM_X86_DIR/libnghttp3.a" \
+                "$LIBS_SIM_X86_DIR/libwolfssl.a"
+        else
+            libtool -static -o "$MERGED_SIM_X86" \
+                "$LIBS_SIM_X86_DIR/libngtcp2.a" \
+                "$LIBS_SIM_X86_DIR/libngtcp2_crypto_quictls.a" \
+                "$LIBS_SIM_X86_DIR/libnghttp3.a" \
+                "$LIBS_SIM_X86_DIR/libssl.a" \
+                "$LIBS_SIM_X86_DIR/libcrypto.a"
+        fi
+        MERGED_SIM="$OUT_DIR/libmqttquic_native_simulator.a"
+        rm -f "$MERGED_SIM"
+        lipo -create "$MERGED_SIM_ARM64" "$MERGED_SIM_X86" -output "$MERGED_SIM"
     fi
 fi
 
@@ -96,7 +122,7 @@ if [ "$HAVE_SIMULATOR" = "1" ]; then
         -library "$MERGED_DEVICE" \
         -library "$MERGED_SIM" \
         -output "$XCFRAMEWORK"
-    rm -f "$MERGED_DEVICE" "$MERGED_SIM"
+    rm -f "$MERGED_DEVICE" "$MERGED_SIM" "$MERGED_SIM_ARM64" "$MERGED_SIM_X86"
 else
     xcodebuild -create-xcframework \
         -library "$MERGED_DEVICE" \

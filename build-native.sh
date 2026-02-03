@@ -185,7 +185,27 @@ build_ios() {
             print_error "Failed to build ngtcp2 for iOS Simulator"
             return 1
         }
-        print_success "iOS Simulator libraries built (libs-simulator/)"
+        print_success "iOS Simulator libraries built (arm64)"
+
+        # Optional x86_64 simulator slice (helps Xcode builds that request both archs)
+        print_status "Step 4/4: Building iOS Simulator x86_64 libraries (WolfSSL → nghttp3 → ngtcp2)..."
+        export ARCH=x86_64
+        export SDK=iphonesimulator
+        export LIBS_DIR="$PROJECT_DIR/ios/libs-simulator-x86_64"
+        export INSTALL_PREFIX="$PROJECT_DIR/ios/install/wolfssl-ios-simulator-x86_64"
+        ./build-wolfssl.sh --arch x86_64 --sdk iphonesimulator --prefix "$INSTALL_PREFIX" || {
+            print_error "Failed to build WolfSSL for iOS Simulator (x86_64)"
+            return 1
+        }
+        ./build-nghttp3.sh --arch x86_64 --sdk iphonesimulator || {
+            print_error "Failed to build nghttp3 for iOS Simulator (x86_64)"
+            return 1
+        }
+        ./build-ngtcp2.sh --wolfssl-path ./install/wolfssl-ios-simulator-x86_64 --arch x86_64 --sdk iphonesimulator || {
+            print_error "Failed to build ngtcp2 for iOS Simulator (x86_64)"
+            return 1
+        }
+        print_success "iOS Simulator libraries built (x86_64)"
     else
         print_warning "iOS Simulator build skipped (device-only). Use USE_WOLFSSL=1 for device+simulator xcframework."
     fi

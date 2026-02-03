@@ -17,18 +17,17 @@ Pod::Spec.new do |s|
   s.swift_version = '5.1'
   s.vendored_libraries = [
     'libs/libngtcp2.a',
-    'libs/libngtcp2_crypto_quictls.a',
+    'libs/libngtcp2_crypto_wolfssl.a',
     'libs/libnghttp3.a',
-    'libs/libssl.a',
-    'libs/libcrypto.a'
+    'libs/libwolfssl.a'
   ]
   s.public_header_files = 'Sources/**/*.h', 'include/**/*.h'
   s.private_header_files = 'Sources/**/*.h', 'include/**/*.h'
   s.header_mappings_dir = 'Sources'
   s.pod_target_xcconfig = {
-    'HEADER_SEARCH_PATHS' => '$(PODS_ROOT)/MqttQuicPlugin/include/ngtcp2 $(PODS_ROOT)/MqttQuicPlugin/include/nghttp3 $(PODS_ROOT)/MqttQuicPlugin/include/openssl',
+    'HEADER_SEARCH_PATHS' => '$(PODS_ROOT)/MqttQuicPlugin/include/ngtcp2 $(PODS_ROOT)/MqttQuicPlugin/include/nghttp3 $(PODS_ROOT)/MqttQuicPlugin/include/wolfssl',
     'LIBRARY_SEARCH_PATHS' => '$(PODS_ROOT)/MqttQuicPlugin/libs',
-    'OTHER_LDFLAGS' => '-lngtcp2 -lngtcp2_crypto_quictls -lnghttp3 -lssl -lcrypto',
+    'OTHER_LDFLAGS' => '-lngtcp2 -lngtcp2_crypto_wolfssl -lnghttp3 -lwolfssl',
     'SWIFT_ACTIVE_COMPILATION_CONDITIONS' => 'NGTCP2_ENABLED NGHTTP3_ENABLED'
   }
 end
