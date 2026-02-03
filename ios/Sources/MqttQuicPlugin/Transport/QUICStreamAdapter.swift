@@ -21,9 +21,19 @@ public final class QUICStreamReader: MQTTStreamReaderProtocol {
 
     public func readexactly(_ n: Int) async throws -> Data {
         var acc = Data()
+        var emptyCount = 0
+        let maxEmptyRetries = 60  // ~300ms total (60 * 5ms) so SUBACK can arrive
         while acc.count < n {
             let chunk = try await stream.read(maxBytes: n - acc.count)
-            if chunk.isEmpty { throw MQTTProtocolError.insufficientData("readexactly") }
+            if chunk.isEmpty {
+                emptyCount += 1
+                if emptyCount >= maxEmptyRetries {
+                    throw MQTTProtocolError.insufficientData("readexactly")
+                }
+                try await Task.sleep(nanoseconds: 5_000_000)  // 5ms
+                continue
+            }
+            emptyCount = 0
             acc.append(chunk)
         }
         return acc

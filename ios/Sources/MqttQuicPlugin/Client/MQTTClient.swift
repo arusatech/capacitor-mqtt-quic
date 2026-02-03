@@ -110,11 +110,11 @@ public final class MQTTClient {
             try await w.drain()
 
             // Read CONNACK
-            let fixed = try await r.readexactly(2)
-            let (msgType, remLen, hdrLen) = try MQTTProtocol.parseFixedHeader(Data(fixed))
+            let (msgType, remLen, fixed) = try await readFixedHeader(r)
             let rest = try await r.readexactly(remLen)
             var full = Data(fixed)
             full.append(rest)
+            let hdrLen = fixed.count
             
             if msgType != MQTTMessageType.CONNACK.rawValue {
                 lock.lock()
@@ -198,12 +198,12 @@ public final class MQTTClient {
         try await w.write(data)
         try await w.drain()
 
-        let fixed = try await r.readexactly(2)
-        let (_, remLen, hdrLen) = try MQTTProtocol.parseFixedHeader(Data(fixed))
+        let (_, remLen, fixed) = try await readFixedHeader(r)
         let rest = try await r.readexactly(remLen)
         var full = Data(fixed)
         full.append(rest)
-        
+        let hdrLen = fixed.count
+
         if version == MQTTProtocolLevel.v5 {
             let (_, reasonCodes, _, _) = try MQTT5Protocol.parseSubackV5(full, offset: hdrLen)
             if let firstRC = reasonCodes.first, firstRC != .grantedQoS0 && firstRC != .grantedQoS1 && firstRC != .grantedQoS2 {
@@ -234,8 +234,7 @@ public final class MQTTClient {
         try await w.write(data)
         try await w.drain()
 
-        let fixed = try await r.readexactly(2)
-        let (_, remLen, _) = try MQTTProtocol.parseFixedHeader(Data(fixed))
+        let (_, remLen, _) = try await readFixedHeader(r)
         _ = try await r.readexactly(remLen)
     }
 
@@ -284,6 +283,22 @@ public final class MQTTClient {
         return pid
     }
 
+    /// Read full MQTT fixed header (1 byte type + 1–4 bytes remaining length). Returns (msgType, remLen, fullFixedHeaderData).
+    private func readFixedHeader(_ r: MQTTStreamReaderProtocol) async throws -> (UInt8, Int, Data) {
+        var fixed = try await r.readexactly(1)
+        for _ in 0..<4 {
+            do {
+                let (rem, _) = try MQTTProtocol.decodeRemainingLength(fixed, offset: 1)
+                return (fixed[0], rem, fixed)
+            } catch {
+                if fixed.count >= 5 { throw error }
+                fixed.append(try await r.readexactly(1))
+            }
+        }
+        let (rem, _) = try MQTTProtocol.decodeRemainingLength(fixed, offset: 1)
+        return (fixed[0], rem, fixed)
+    }
+
     private func startMessageLoop() {
         messageLoopTask = Task { [weak self] in
             guard let self = self else { return }
@@ -295,8 +310,7 @@ public final class MQTTClient {
                 guard let r = r else { break }
 
                 do {
-                    let fixed = try await r.readexactly(2)
-                    let (msgType, remLen, _) = try MQTTProtocol.parseFixedHeader(Data(fixed))
+                    let (msgType, remLen, fixed) = try await self.readFixedHeader(r)
                     let rest = try await r.readexactly(remLen)
                     let type = msgType & 0xF0
 
