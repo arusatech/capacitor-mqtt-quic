@@ -111,6 +111,7 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
                     sessionExpiryInterval: sessionExpiryInterval != nil ? UInt32(sessionExpiryInterval!) : nil
                 )
                 call.resolve(["connected": true])
+                self.notifyListeners("connected", data: ["connected": true])
             } catch {
                 call.reject("\(error)")
             }
@@ -161,6 +162,7 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
                 try await client.publish(topic: topic, payload: Data(payload.utf8), qos: 0)
                 try await client.disconnect()
                 call.resolve(["success": true])
+                self.notifyListeners("subscribed", data: ["topic": topic])
             } catch {
                 call.reject("\(error)")
             }

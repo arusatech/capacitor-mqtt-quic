@@ -87,6 +87,7 @@ class MqttQuicPlugin : Plugin() {
                 client = MQTTClient(protocolVersion)
                 client.connect(host, port, clientId, username, password, cleanSession, keepalive, sessionExpiryInterval)
                 call.resolve(JSObject().put("connected", true))
+                notifyListeners("connected", JSObject().put("connected", true))
             } catch (e: Exception) {
                 call.reject(e.message ?: "Connection failed")
             }
@@ -132,6 +133,7 @@ class MqttQuicPlugin : Plugin() {
                 client.publish(topic, payload.toByteArray(StandardCharsets.UTF_8), 0, null)
                 client.disconnect()
                 call.resolve(JSObject().put("success", true))
+                notifyListeners("subscribed", JSObject().put("topic", topic))
             } catch (e: Exception) {
                 call.reject(e.message ?: "Test harness failed")
             }
