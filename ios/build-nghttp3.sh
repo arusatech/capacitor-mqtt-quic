@@ -32,6 +32,7 @@ ARCH="${ARCH:-arm64}"
 SDK="${SDK:-iphoneos}"
 BUILD_TYPE="${BUILD_TYPE:-Release}"
 IOS_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET:-15.0}"
+[ "$SDK" = "iphonesimulator" ] && LIBS_DIR="${LIBS_DIR:-$SCRIPT_DIR/libs-simulator}" || LIBS_DIR="${LIBS_DIR:-$SCRIPT_DIR/libs}"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -121,8 +122,10 @@ if [ ! -f "$NGHTTP3_SOURCE_DIR/sfparse/sfparse.c" ] && [ ! -f "$NGHTTP3_SOURCE_D
     fi
 fi
 
-# Create build directory
-BUILD_DIR="build/nghttp3-ios-$ARCH"
+# Create build directory (separate for simulator so device build is not overwritten)
+SDK_SUFFIX=""
+[ "$SDK" = "iphonesimulator" ] && SDK_SUFFIX="-simulator"
+BUILD_DIR="build/nghttp3-ios-${ARCH}${SDK_SUFFIX}"
 mkdir -p "$BUILD_DIR"
 
 # Clean build dir if CMake cache points to a different source tree
@@ -161,8 +164,7 @@ echo "Installing..."
 cmake --install .
 
 echo ""
-echo "Syncing artifacts to ios/libs and ios/include..."
-LIBS_DIR="$SCRIPT_DIR/libs"
+echo "Syncing artifacts to $LIBS_DIR and ios/include..."
 INCLUDE_DIR="$SCRIPT_DIR/include"
 mkdir -p "$LIBS_DIR" "$INCLUDE_DIR"
 cp "$(pwd)/install/lib/libnghttp3.a" "$LIBS_DIR/"

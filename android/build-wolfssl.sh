@@ -61,11 +61,19 @@ case "$ANDROID_ABI" in
     *) echo "Error: Unsupported ABI $ANDROID_ABI"; exit 1 ;;
 esac
 API_LEVEL="${ANDROID_PLATFORM#android-}"
-TOOLCHAIN="$ANDROID_NDK/toolchains/llvm/prebuilt/$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)"
+
+# NDK ships darwin-x86_64 for macOS (even on Apple Silicon); darwin-arm64 may not exist
+PREBUILT_ROOT="$ANDROID_NDK/toolchains/llvm/prebuilt"
+HOST_OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+HOST_ARCH="$(uname -m)"
+for prebuilt in "${HOST_OS}-${HOST_ARCH}" "${HOST_OS}-x86_64" "${HOST_OS}-arm64" "darwin-x86_64" "darwin-arm64"; do
+    [ -d "$PREBUILT_ROOT/$prebuilt/bin" ] && TOOLCHAIN="$PREBUILT_ROOT/$prebuilt" && break
+done
+[ -z "$TOOLCHAIN" ] || [ ! -d "$TOOLCHAIN/bin" ] && { echo "Error: No LLVM prebuilt found under $PREBUILT_ROOT (tried ${HOST_OS}-${HOST_ARCH}, ${HOST_OS}-x86_64, darwin-x86_64, darwin-arm64)"; exit 1; }
 export PATH="$TOOLCHAIN/bin:$PATH"
 CC="$TOOLCHAIN/bin/${TOOLCHAIN_ARCH}${API_LEVEL}-clang"
 [ ! -x "$CC" ] && CC="$TOOLCHAIN/bin/${TOOLCHAIN_ARCH}-linux-android${API_LEVEL}-clang"
-[ ! -x "$CC" ] && { echo "Error: Clang not found for $ANDROID_ABI"; exit 1; }
+[ ! -x "$CC" ] && { echo "Error: Clang not found for $ANDROID_ABI (looked for $CC)"; exit 1; }
 
 INSTALL_PREFIX="$INSTALL_PREFIX/$API_ARCH"
 mkdir -p "$INSTALL_PREFIX"

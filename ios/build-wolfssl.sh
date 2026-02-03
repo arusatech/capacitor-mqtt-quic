@@ -22,8 +22,13 @@ WOLFSSL_SOURCE_DIR="${WOLFSSL_SOURCE_DIR:-$DEPS_DIR/wolfssl}"
 ARCH="${ARCH:-arm64}"
 SDK="${SDK:-iphoneos}"
 IOS_DEPLOYMENT_TARGET="${IOS_DEPLOYMENT_TARGET:-15.0}"
-INSTALL_PREFIX="${INSTALL_PREFIX:-$(pwd)/install/wolfssl-ios}"
-LIBS_DIR="${SCRIPT_DIR}/libs"
+if [ "$SDK" = "iphonesimulator" ]; then
+    INSTALL_PREFIX="${INSTALL_PREFIX:-$SCRIPT_DIR/install/wolfssl-ios-simulator}"
+    LIBS_DIR="${LIBS_DIR:-$SCRIPT_DIR/libs-simulator}"
+else
+    INSTALL_PREFIX="${INSTALL_PREFIX:-$SCRIPT_DIR/install/wolfssl-ios}"
+    LIBS_DIR="${LIBS_DIR:-$SCRIPT_DIR/libs}"
+fi
 INCLUDE_DIR="${SCRIPT_DIR}/include"
 
 while [[ $# -gt 0 ]]; do

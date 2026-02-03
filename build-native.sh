@@ -150,7 +150,7 @@ build_ios() {
         return 1
     fi
     
-    print_status "Step 3/3: Building ngtcp2 for iOS..."
+    print_status "Step 3/3: Building ngtcp2 for iOS (device)..."
     if [ -f "./build-ngtcp2.sh" ]; then
         if [ "$USE_WOLFSSL" = "1" ]; then
             ./build-ngtcp2.sh --wolfssl-path ./install/wolfssl-ios || {
@@ -163,14 +163,36 @@ build_ios() {
                 return 1
             }
         fi
-        print_success "ngtcp2 built for iOS"
+        print_success "ngtcp2 built for iOS (device)"
     else
         print_error "build-ngtcp2.sh not found in ios/"
         return 1
     fi
-    
+
+    if [ "$USE_WOLFSSL" = "1" ]; then
+        print_status "Step 4/4: Building iOS Simulator libraries (WolfSSL → nghttp3 → ngtcp2)..."
+        export ARCH=arm64
+        export SDK=iphonesimulator
+        ./build-wolfssl.sh --arch arm64 --sdk iphonesimulator || {
+            print_error "Failed to build WolfSSL for iOS Simulator"
+            return 1
+        }
+        ./build-nghttp3.sh --arch arm64 --sdk iphonesimulator || {
+            print_error "Failed to build nghttp3 for iOS Simulator"
+            return 1
+        }
+        ./build-ngtcp2.sh --wolfssl-path ./install/wolfssl-ios-simulator --arch arm64 --sdk iphonesimulator || {
+            print_error "Failed to build ngtcp2 for iOS Simulator"
+            return 1
+        }
+        print_success "iOS Simulator libraries built (libs-simulator/)"
+    else
+        print_warning "iOS Simulator build skipped (device-only). Use USE_WOLFSSL=1 for device+simulator xcframework."
+    fi
+
     cd "$PROJECT_DIR"
-    print_success "All iOS libraries built successfully!"
+    print_success "All iOS libraries (device + simulator) built successfully!"
+    print_status "Next: cd ios && ./create-xcframework.sh  (creates MqttQuicLibs.xcframework for SPM / Simulator)"
 }
 
 # Build Android libraries (WolfSSL or QuicTLS → nghttp3 → ngtcp2)

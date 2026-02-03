@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# Creates MqttQuicLibs.xcframework from ios/libs/*.a for Swift Package Manager.
-# Default build uses WolfSSL (TLS 1.3 + QUIC); run build-native.sh or build-wolfssl then nghttp3 then ngtcp2.
-# Optional: QuicTLS via build-openssl.sh then ngtcp2 --quictls.
+# Creates MqttQuicLibs.xcframework from ios/libs/*.a (device) and optionally libs-simulator/*.a (simulator).
+# For device + simulator (required for "Run on iPhone Simulator"), run build-native.sh first (builds both).
+# Default build uses WolfSSL; run build-native.sh from plugin root, then this script.
 #
 # Usage: from plugin root or from ios/
 #   ./create-xcframework.sh
@@ -16,15 +16,15 @@ else
     IOS_DIR="$(pwd)"
 fi
 LIBS_DIR="$IOS_DIR/libs"
-OUT_DIR="$IOS_DIR/Libs"
+LIBS_SIM_DIR="$IOS_DIR/libs-simulator"
+OUT_DIR="$IOS_DIR/libs"
 XCFRAMEWORK="$OUT_DIR/MqttQuicLibs.xcframework"
 
-# Require ngtcp2 + nghttp3; TLS = WolfSSL or QuicTLS
+# Require device libs (ngtcp2 + nghttp3)
 if [ ! -f "$LIBS_DIR/libngtcp2.a" ] || [ ! -f "$LIBS_DIR/libnghttp3.a" ]; then
     echo "Error: Missing libngtcp2.a or libnghttp3.a in $LIBS_DIR"
-    echo "Default (WolfSSL): from plugin root run ./build-native.sh (builds WolfSSL by default)"
-    echo "Or: cd ios && ./build-wolfssl.sh && ./build-nghttp3.sh && ./build-ngtcp2.sh --wolfssl-path ./install/wolfssl-ios"
-    echo "QuicTLS: cd ios && ./build-openssl.sh && ./build-nghttp3.sh && ./build-ngtcp2.sh --quictls"
+    echo "From plugin root run: ./build-native.sh"
+    echo "Then run this script again."
     exit 1
 fi
 USE_WOLFSSL=0
@@ -38,18 +38,20 @@ if [ "$USE_WOLFSSL" = "0" ]; then
     done
 fi
 
-echo "Merging static libraries (TLS: $([ "$USE_WOLFSSL" = "1" ] && echo WolfSSL || echo QuicTLS))..."
 mkdir -p "$OUT_DIR"
-MERGED="$OUT_DIR/libmqttquic_native.a"
-rm -f "$MERGED"
+
+# Merge device libs
+echo "Merging device static libraries (TLS: $([ "$USE_WOLFSSL" = "1" ] && echo WolfSSL || echo QuicTLS))..."
+MERGED_DEVICE="$OUT_DIR/libmqttquic_native_device.a"
+rm -f "$MERGED_DEVICE"
 if [ "$USE_WOLFSSL" = "1" ]; then
-    libtool -static -o "$MERGED" \
+    libtool -static -o "$MERGED_DEVICE" \
         "$LIBS_DIR/libngtcp2.a" \
         "$LIBS_DIR/libngtcp2_crypto_wolfssl.a" \
         "$LIBS_DIR/libnghttp3.a" \
         "$LIBS_DIR/libwolfssl.a"
 else
-    libtool -static -o "$MERGED" \
+    libtool -static -o "$MERGED_DEVICE" \
         "$LIBS_DIR/libngtcp2.a" \
         "$LIBS_DIR/libngtcp2_crypto_quictls.a" \
         "$LIBS_DIR/libnghttp3.a" \
@@ -57,11 +59,50 @@ else
         "$LIBS_DIR/libcrypto.a"
 fi
 
+# Simulator slice (optional; required for running on iOS Simulator)
+HAVE_SIMULATOR=0
+if [ -f "$LIBS_SIM_DIR/libngtcp2.a" ] && [ -f "$LIBS_SIM_DIR/libnghttp3.a" ]; then
+    if [ "$USE_WOLFSSL" = "1" ] && [ -f "$LIBS_SIM_DIR/libngtcp2_crypto_wolfssl.a" ] && [ -f "$LIBS_SIM_DIR/libwolfssl.a" ]; then
+        HAVE_SIMULATOR=1
+    elif [ "$USE_WOLFSSL" = "0" ] && [ -f "$LIBS_SIM_DIR/libngtcp2_crypto_quictls.a" ] && [ -f "$LIBS_SIM_DIR/libssl.a" ]; then
+        HAVE_SIMULATOR=1
+    fi
+fi
+
+if [ "$HAVE_SIMULATOR" = "1" ]; then
+    echo "Merging simulator static libraries..."
+    MERGED_SIM="$OUT_DIR/libmqttquic_native_simulator.a"
+    rm -f "$MERGED_SIM"
+    if [ "$USE_WOLFSSL" = "1" ]; then
+        libtool -static -o "$MERGED_SIM" \
+            "$LIBS_SIM_DIR/libngtcp2.a" \
+            "$LIBS_SIM_DIR/libngtcp2_crypto_wolfssl.a" \
+            "$LIBS_SIM_DIR/libnghttp3.a" \
+            "$LIBS_SIM_DIR/libwolfssl.a"
+    else
+        libtool -static -o "$MERGED_SIM" \
+            "$LIBS_SIM_DIR/libngtcp2.a" \
+            "$LIBS_SIM_DIR/libngtcp2_crypto_quictls.a" \
+            "$LIBS_SIM_DIR/libnghttp3.a" \
+            "$LIBS_SIM_DIR/libssl.a" \
+            "$LIBS_SIM_DIR/libcrypto.a"
+    fi
+fi
+
 echo "Creating xcframework..."
 rm -rf "$XCFRAMEWORK"
-xcodebuild -create-xcframework \
-    -library "$MERGED" \
-    -output "$XCFRAMEWORK"
-rm -f "$MERGED"
+if [ "$HAVE_SIMULATOR" = "1" ]; then
+    xcodebuild -create-xcframework \
+        -library "$MERGED_DEVICE" \
+        -library "$MERGED_SIM" \
+        -output "$XCFRAMEWORK"
+    rm -f "$MERGED_DEVICE" "$MERGED_SIM"
+else
+    xcodebuild -create-xcframework \
+        -library "$MERGED_DEVICE" \
+        -output "$XCFRAMEWORK"
+    rm -f "$MERGED_DEVICE"
+    echo "Warning: No simulator slice (libs-simulator/ missing or incomplete). Run ./build-native.sh from plugin root to build device+simulator, then re-run this script."
+fi
 
 echo "Done: $XCFRAMEWORK"
