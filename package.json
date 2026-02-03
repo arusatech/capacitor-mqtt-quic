@@ -15,8 +15,8 @@
   ],
   "scripts": {
     "build": "npm run build:tsc && npm run build:rollup",
-    "build:tsc": "tsc",
-    "build:rollup": "rollup -c rollup.config.js",
+    "build:tsc": "npx tsc",
+    "build:rollup": "npx rollup -c rollup.config.js",
     "watch": "rollup -c rollup.config.js -w",
     "lint": "eslint src --ext ts",
     "prepack": "npm run clean:build-artifacts",
