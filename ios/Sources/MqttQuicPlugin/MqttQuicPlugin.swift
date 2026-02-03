@@ -234,6 +234,12 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
         Task {
             do {
                 try await client.subscribe(topic: topic, qos: UInt8(min(qos, 2)), subscriptionIdentifier: subscriptionIdentifier)
+                // Deliver incoming PUBLISH for this topic to JS (avoids message loop having no handler; prevents stuck state)
+                client.onMessage(topic) { [weak self] payload in
+                    guard let self = self else { return }
+                    let str = String(data: payload, encoding: .utf8) ?? ""
+                    self.notifyListeners("message", ["topic": topic, "payload": str])
+                }
                 call.resolve(["success": true])
             } catch {
                 call.reject("\(error)")
