@@ -39,7 +39,7 @@ await MqttQuic.connect({
   username: 'user',
   password: 'pass',
   cleanSession: true,
-  keepalive: 60
+  keepalive: 20
 });
 
 // Publish
@@ -157,7 +157,7 @@ await MqttQuic.connect({
   clientId: 'my-client-id',
   protocolVersion: '5.0',  // '3.1.1' | '5.0' | 'auto' (default)
   sessionExpiryInterval: 3600,  // Session persists 1 hour after disconnect
-  keepalive: 60
+  keepalive: 20
 });
 
 // Auto-negotiation (default): tries 5.0, falls back to 3.1.1

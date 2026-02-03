@@ -79,7 +79,7 @@ object MQTTProtocol {
         clientId: String,
         username: String? = null,
         password: String? = null,
-        keepalive: Int = 60,
+        keepalive: Int = 20,
         cleanSession: Boolean = true
     ): ByteArray {
         val variableHeader = mutableListOf<Byte>()

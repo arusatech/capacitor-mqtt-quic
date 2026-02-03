@@ -60,7 +60,7 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
         let username = call.getString("username")
         let password = call.getString("password")
         let cleanSession = call.getBool("cleanSession") ?? true
-        let keepalive = call.getInt("keepalive") ?? 60
+        let keepalive = call.getInt("keepalive") ?? 20
         let protocolVersionStr = call.getString("protocolVersion") ?? "auto"
         let sessionExpiryInterval = call.getInt("sessionExpiryInterval")
         let caFile = call.getString("caFile")
@@ -154,7 +154,7 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
                     username: nil,
                     password: nil,
                     cleanSession: true,
-                    keepalive: 60,
+                    keepalive: 20,
                     sessionExpiryInterval: nil
                 )
                 try await client.subscribe(topic: topic, qos: 0, subscriptionIdentifier: nil)

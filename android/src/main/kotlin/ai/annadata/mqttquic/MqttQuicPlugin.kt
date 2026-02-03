@@ -47,7 +47,7 @@ class MqttQuicPlugin : Plugin() {
         val username = call.getString("username")
         val password = call.getString("password")
         val cleanSession = call.getBoolean("cleanSession", true)
-        val keepalive = call.getInt("keepalive", 60)
+        val keepalive = call.getInt("keepalive", 20)
         val protocolVersionStr = call.getString("protocolVersion") ?: "auto"
         val sessionExpiryInterval = call.getInt("sessionExpiryInterval")
         val caFile = call.getString("caFile")

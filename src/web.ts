@@ -40,7 +40,7 @@ export class MqttQuicWeb {
         username: options.username,
         password: options.password,
         clean: options.cleanSession ?? true,
-        keepalive: options.keepalive ?? 60,
+        keepalive: options.keepalive ?? 20,
         reconnectPeriod: 0,
         connectTimeout: 30_000,
       };
@@ -183,7 +183,7 @@ export class MqttQuicWeb {
         port,
         clientId,
         cleanSession: true,
-        keepalive: 60,
+        keepalive: 20,
       });
       await this.subscribe({ topic, qos: 0 });
       await this.publish({ topic, payload, qos: 0 });

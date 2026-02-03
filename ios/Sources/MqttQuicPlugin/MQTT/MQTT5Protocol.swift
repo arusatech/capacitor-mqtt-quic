@@ -13,7 +13,7 @@ public final class MQTT5Protocol {
         clientId: String,
         username: String? = nil,
         password: String? = nil,
-        keepalive: UInt16 = 60,
+        keepalive: UInt16 = 20,
         cleanStart: Bool = true,
         sessionExpiryInterval: UInt32? = nil,
         receiveMaximum: UInt16? = nil,

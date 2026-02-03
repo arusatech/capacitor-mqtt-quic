@@ -93,7 +93,7 @@ public final class MQTTProtocol {
         clientId: String,
         username: String? = nil,
         password: String? = nil,
-        keepalive: UInt16 = 60,
+        keepalive: UInt16 = 20,
         cleanSession: Bool = true
     ) throws -> Data {
         var variableHeader = Data()

@@ -9,7 +9,7 @@ object MQTT5Protocol {
         clientId: String,
         username: String? = null,
         password: String? = null,
-        keepalive: Int = 60,
+        keepalive: Int = 20,
         cleanStart: Boolean = true,
         sessionExpiryInterval: Int? = null,
         receiveMaximum: Int? = null,
