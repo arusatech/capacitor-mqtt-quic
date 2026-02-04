@@ -35,6 +35,7 @@ public final class MQTTClient {
     private var reader: MQTTStreamReaderProtocol?
     private var writer: MQTTStreamWriterProtocol?
     private var messageLoopTask: Task<Void, Error>?
+    private var keepaliveTask: Task<Void, Never>?
     private var nextPacketId: UInt16 = 1
     private var subscribedTopics: [String: (Data) -> Void] = [:]
     /// Per-connection Topic Alias map (alias -> topic name) for MQTT 5.0 incoming PUBLISH.
@@ -213,6 +214,7 @@ public final class MQTTClient {
             lock.unlock()
 
             startMessageLoop()
+            startKeepaliveLoop()
         } catch {
             lock.lock()
             let w = writer
@@ -307,6 +309,8 @@ public final class MQTTClient {
     public func disconnect() async throws {
         let task = messageLoopTask
         messageLoopTask = nil
+        keepaliveTask?.cancel()
+        keepaliveTask = nil
         task?.cancel()
         _ = try? await task?.value
 
@@ -367,6 +371,32 @@ public final class MQTTClient {
         return (fixed[0], rem, fixed)
     }
 
+    /// Send PINGREQ at effectiveKeepalive interval so server sees activity and does not close (idle/keepalive). [MQTT-3.1.2-20]
+    private func startKeepaliveLoop() {
+        keepaliveTask?.cancel()
+        lock.lock()
+        let ka = effectiveKeepalive
+        lock.unlock()
+        guard ka > 0 else { return }
+        keepaliveTask = Task { [weak self] in
+            guard let self = self else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: UInt64(ka) * 1_000_000_000)
+                if Task.isCancelled { break }
+                self.lock.lock()
+                let w = self.writer
+                let connected: Bool
+                if case .connected = self.state { connected = true } else { connected = false }
+                self.lock.unlock()
+                guard connected, let w = w else { break }
+                do {
+                    try await w.write(MQTTProtocol.buildPingreq())
+                    try await w.drain()
+                } catch { break }
+            }
+        }
+    }
+
     private func startMessageLoop() {
         messageLoopTask = Task { [weak self] in
             guard let self = self else { return }
@@ -391,6 +421,8 @@ public final class MQTTClient {
                     case MQTTMessageType.DISCONNECT.rawValue:
                         let reasonCode: UInt8 = rest.first ?? 0x00
                         self.lock.lock()
+                        self.keepaliveTask?.cancel()
+                        self.keepaliveTask = nil
                         self.quicClient = nil
                         self.stream = nil
                         self.reader = nil

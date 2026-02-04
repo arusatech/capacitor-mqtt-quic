@@ -17,6 +17,7 @@ import ai.annadata.mqttquic.transport.QUICStreamReader
 import ai.annadata.mqttquic.transport.QUICStreamWriter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -53,6 +54,7 @@ class MQTTClient {
     private var reader: MQTTStreamReader? = null
     private var writer: MQTTStreamWriter? = null
     private var messageLoopJob: kotlinx.coroutines.Job? = null
+    private var keepaliveJob: kotlinx.coroutines.Job? = null
     private var nextPacketId = 1
     private val subscribedTopics = mutableMapOf<String, (ByteArray) -> Unit>()
     /** Per-connection Topic Alias map (alias -> topic name) for MQTT 5.0 incoming PUBLISH. */
@@ -206,6 +208,7 @@ class MQTTClient {
 
             lock.withLock { state = State.CONNECTED }
             startMessageLoop()
+            startKeepaliveLoop()
         } catch (e: Exception) {
             val wr = lock.withLock {
                 val w = writer
@@ -299,6 +302,8 @@ class MQTTClient {
     suspend fun disconnect() {
         val job = messageLoopJob
         messageLoopJob = null
+        keepaliveJob?.cancel()
+        keepaliveJob = null
         job?.cancel()
         job?.join()
 
@@ -348,6 +353,26 @@ class MQTTClient {
         pid
     }
 
+    /** Send PINGREQ at effectiveKeepalive interval so server sees activity and does not close (idle/keepalive). [MQTT-3.1.2-20] */
+    private fun startKeepaliveLoop() {
+        keepaliveJob?.cancel()
+        val ka = lock.withLock { effectiveKeepalive }
+        if (ka <= 0) return
+        keepaliveJob = scope.launch {
+            while (isActive) {
+                delay(ka * 1000L) // seconds to ms
+                val (w, stillConnected) = lock.withLock {
+                    writer to (state == State.CONNECTED)
+                }
+                if (!stillConnected || w == null) break
+                try {
+                    w.write(MQTTProtocol.buildPingreq())
+                    w.drain()
+                } catch (_: Exception) { break }
+            }
+        }
+    }
+
     private fun startMessageLoop() {
         messageLoopJob = scope.launch {
             while (isActive) {
@@ -361,6 +386,8 @@ class MQTTClient {
                         MQTTMessageType.DISCONNECT -> {
                             val reasonCode = if (rest.isNotEmpty()) rest[0].toInt() and 0xFF else 0x00
                             lock.withLock {
+                                keepaliveJob?.cancel()
+                                keepaliveJob = null
                                 quicClient = null
                                 stream = null
                                 reader = null
