@@ -40,6 +40,10 @@ public final class MQTTClient {
     private var subscribedTopics: [String: (Data) -> Void] = [:]
     /// Per-connection Topic Alias map (alias -> topic name) for MQTT 5.0 incoming PUBLISH.
     private var topicAliasMap: [Int: String] = [:]
+    /// Handoff from message loop to subscribe() so SUBACK is not consumed by the loop (avoids race and "insufficientData(SUBACK packet ID)").
+    private var subackContinuation: CheckedContinuation<Data, Error>?
+    /// Handoff from message loop to unsubscribe() for UNSUBACK.
+    private var unsubackContinuation: CheckedContinuation<Data, Error>?
     private let lock = NSLock()
 
     public init(protocolVersion: ProtocolVersion = .auto) {
@@ -279,19 +283,22 @@ public final class MQTTClient {
         try await w.write(data)
         try await w.drain()
 
-        let (_, remLen, fixed) = try await readFixedHeader(r)
-        let rest = try await r.readexactly(remLen)
-        var full = Data(fixed)
-        full.append(rest)
-        let hdrLen = fixed.count
+        // Wait for SUBACK via message loop handoff (single reader avoids race / "insufficientData(SUBACK packet ID)")
+        let full: Data = try await withCheckedThrowingContinuation { cont in
+            lock.lock()
+            subackContinuation = cont
+            lock.unlock()
+        }
+        let (_, remLenBytes) = try MQTTProtocol.decodeRemainingLength(full, offset: 1)
+        let payloadOffset = 1 + remLenBytes
 
         if version == MQTTProtocolLevel.v5 {
-            let (_, reasonCodes, _, _) = try MQTT5Protocol.parseSubackV5(full, offset: hdrLen)
+            let (_, reasonCodes, _, _) = try MQTT5Protocol.parseSubackV5(full, offset: payloadOffset)
             if let firstRC = reasonCodes.first, firstRC != .grantedQoS0 && firstRC != .grantedQoS1 && firstRC != .grantedQoS2 {
                 throw MQTTProtocolError.insufficientData("SUBACK error \(firstRC)")
             }
         } else {
-            let (_, rc, _) = try MQTTProtocol.parseSuback(full, offset: hdrLen)
+            let (_, rc, _) = try MQTTProtocol.parseSuback(full, offset: payloadOffset)
             if rc > 0x02 { throw MQTTProtocolError.insufficientData("SUBACK error \(rc)") }
         }
     }
@@ -315,8 +322,12 @@ public final class MQTTClient {
         try await w.write(data)
         try await w.drain()
 
-        let (_, remLen, _) = try await readFixedHeader(r)
-        _ = try await r.readexactly(remLen)
+        // Wait for UNSUBACK via message loop handoff (single reader)
+        _ = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Data, Error>) in
+            lock.lock()
+            unsubackContinuation = cont
+            lock.unlock()
+        }
     }
 
     public func disconnect() async throws {
@@ -328,6 +339,10 @@ public final class MQTTClient {
         _ = try? await task?.value
 
         lock.lock()
+        let subCont = subackContinuation
+        subackContinuation = nil
+        let unsubCont = unsubackContinuation
+        unsubackContinuation = nil
         let w = writer
         let version = activeProtocolVersion
         quicClient = nil
@@ -339,6 +354,8 @@ public final class MQTTClient {
         assignedClientIdentifier = nil
         topicAliasMap.removeAll()
         lock.unlock()
+        subCont?.resume(throwing: MQTTProtocolError.insufficientData("disconnected"))
+        unsubCont?.resume(throwing: MQTTProtocolError.insufficientData("disconnected"))
 
         if let w = w {
             let data: Data
@@ -424,11 +441,34 @@ public final class MQTTClient {
                     let (msgType, remLen, fixed) = try await self.readFixedHeader(r)
                     let rest = try await r.readexactly(remLen)
                     let type = msgType & 0xF0
+                    var fullPacket = Data(fixed)
+                    fullPacket.append(rest)
 
                     self.lock.lock()
                     let version = self.activeProtocolVersion
                     let w = self.writer
+                    // Hand off SUBACK/UNSUBACK to waiting subscribe()/unsubscribe(); fail waiters on wrong packet type
+                    if type == MQTTMessageType.SUBACK.rawValue {
+                        let cont = self.subackContinuation
+                        self.subackContinuation = nil
+                        self.lock.unlock()
+                        cont?.resume(returning: fullPacket)
+                        continue
+                    }
+                    if type == MQTTMessageType.UNSUBACK.rawValue {
+                        let cont = self.unsubackContinuation
+                        self.unsubackContinuation = nil
+                        self.lock.unlock()
+                        cont?.resume(returning: fullPacket)
+                        continue
+                    }
+                    let subCont = self.subackContinuation
+                    self.subackContinuation = nil
+                    let unsubCont = self.unsubackContinuation
+                    self.unsubackContinuation = nil
                     self.lock.unlock()
+                    subCont?.resume(throwing: MQTTProtocolError.insufficientData("expected SUBACK"))
+                    unsubCont?.resume(throwing: MQTTProtocolError.insufficientData("expected UNSUBACK"))
 
                     switch type {
                     case MQTTMessageType.DISCONNECT.rawValue:
@@ -496,12 +536,16 @@ public final class MQTTClient {
                         lock.lock()
                         keepaliveTask?.cancel()
                         keepaliveTask = nil
-                        quicClient = nil
-                        stream = nil
+                        // Do not set quicClient = nil / stream = nil here: NGTCP2Client.deinit calls ngtcp2_client_close()
+                        // and would make the server see "stream reset by peer". Just stop using reader/writer and mark disconnected.
                         reader = nil
                         writer = nil
                         assignedClientIdentifier = nil
                         topicAliasMap.removeAll()
+                        subackContinuation?.resume(throwing: error)
+                        subackContinuation = nil
+                        unsubackContinuation?.resume(throwing: error)
+                        unsubackContinuation = nil
                         state = .disconnected
                         lock.unlock()
                     }

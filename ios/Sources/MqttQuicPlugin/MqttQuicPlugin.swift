@@ -96,8 +96,19 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
                     DispatchQueue.main.async { call.reject("Server unreachable (UDP ping to \(host):\(port) failed). Check network and firewall.") }
                     return
                 }
-                if case .connected = client.getState() {
-                    try? await client.disconnect()
+                // Idempotent / prevent concurrent connect: avoid second call disconnecting or replacing client (server sees stream reset)
+                switch client.getState() {
+                case .connected:
+                    DispatchQueue.main.async {
+                        call.resolve(["connected": true])
+                        self.notifyListeners("connected", data: ["connected": true])
+                    }
+                    return
+                case .connecting:
+                    DispatchQueue.main.async { call.reject("Already connecting") }
+                    return
+                case .disconnected, .error:
+                    break
                 }
                 client = MQTTClient(protocolVersion: protocolVersion)
                 try await client.connect(
