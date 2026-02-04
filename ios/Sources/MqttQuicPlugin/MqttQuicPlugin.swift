@@ -220,7 +220,9 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
                 try await client.publish(topic: topic, payload: data, qos: UInt8(min(qos, 2)), properties: properties)
                 DispatchQueue.main.async { call.resolve(["success": true]) }
             } catch {
-                DispatchQueue.main.async { call.reject("\(error)") }
+                let msg = "\(error)"
+                let code = (msg.contains("not connected") || msg.lowercased().contains("stream") || msg.lowercased().contains("connection")) ? "CONNECTION_LOST" : "PUBLISH_FAILED"
+                DispatchQueue.main.async { call.reject(msg, code, nil) }
             }
         }
     }

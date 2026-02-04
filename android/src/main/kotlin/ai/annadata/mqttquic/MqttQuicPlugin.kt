@@ -187,7 +187,13 @@ class MqttQuicPlugin : Plugin() {
                 client.publish(topic, data, minOf(qos, 2), if (properties.isNotEmpty()) properties else null)
                 call.resolve(JSObject().put("success", true))
             } catch (e: Exception) {
-                call.reject(e.message ?: "Publish failed")
+                val msg = e.message ?: "Publish failed"
+                val code = when {
+                    msg.contains("not connected", ignoreCase = true) -> "CONNECTION_LOST"
+                    msg.contains("stream", ignoreCase = true) || msg.contains("connection", ignoreCase = true) -> "CONNECTION_LOST"
+                    else -> "PUBLISH_FAILED"
+                }
+                call.reject(msg, code)
             }
         }
     }

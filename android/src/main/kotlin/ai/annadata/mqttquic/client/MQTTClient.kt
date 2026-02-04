@@ -238,8 +238,21 @@ class MQTTClient {
         } else {
             data = MQTTProtocol.buildPublish(topic, payload, pid, qos, false)
         }
-        w.write(data)
-        w.drain()
+        try {
+            w.write(data)
+            w.drain()
+        } catch (e: Exception) {
+            lock.withLock {
+                keepaliveJob?.cancel()
+                keepaliveJob = null
+                quicClient = null
+                stream = null
+                reader = null
+                writer = null
+                state = State.DISCONNECTED
+            }
+            throw e
+        }
     }
 
     suspend fun subscribe(topic: String, qos: Int, subscriptionIdentifier: Int? = null) {
@@ -445,7 +458,20 @@ class MQTTClient {
                         }
                     }
                 } catch (e: Exception) {
-                    if (!isActive) break
+                    if (isActive) {
+                        lock.withLock {
+                            keepaliveJob?.cancel()
+                            keepaliveJob = null
+                            quicClient = null
+                            stream = null
+                            reader = null
+                            writer = null
+                            assignedClientIdentifier = null
+                            topicAliasMap.clear()
+                            state = State.DISCONNECTED
+                        }
+                    }
+                    break
                 }
             }
         }

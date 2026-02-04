@@ -244,8 +244,21 @@ public final class MQTTClient {
         } else {
             data = try MQTTProtocol.buildPublish(topic: topic, payload: payload, packetId: pid, qos: qos, retain: false)
         }
-        try await w.write(data)
-        try await w.drain()
+        do {
+            try await w.write(data)
+            try await w.drain()
+        } catch {
+            lock.lock()
+            keepaliveTask?.cancel()
+            keepaliveTask = nil
+            quicClient = nil
+            stream = nil
+            reader = nil
+            writer = nil
+            state = .disconnected
+            lock.unlock()
+            throw error
+        }
     }
 
     public func subscribe(topic: String, qos: UInt8, subscriptionIdentifier: Int? = nil) async throws {
@@ -479,7 +492,20 @@ public final class MQTTClient {
                         break
                     }
                 } catch {
-                    if !Task.isCancelled { break }
+                    if !Task.isCancelled {
+                        lock.lock()
+                        keepaliveTask?.cancel()
+                        keepaliveTask = nil
+                        quicClient = nil
+                        stream = nil
+                        reader = nil
+                        writer = nil
+                        assignedClientIdentifier = nil
+                        topicAliasMap.removeAll()
+                        state = .disconnected
+                        lock.unlock()
+                    }
+                    break
                 }
             }
         }
