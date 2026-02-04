@@ -93,7 +93,7 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
                     unsetenv("MQTT_QUIC_CA_PATH")
                 }
                 if !NGTCP2Client.ping(host: host, port: UInt16(port)) {
-                    call.reject("Server unreachable (UDP ping to \(host):\(port) failed). Check network and firewall.")
+                    DispatchQueue.main.async { call.reject("Server unreachable (UDP ping to \(host):\(port) failed). Check network and firewall.") }
                     return
                 }
                 if case .connected = client.getState() {
@@ -110,10 +110,12 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
                     keepalive: UInt16(keepalive),
                     sessionExpiryInterval: sessionExpiryInterval != nil ? UInt32(sessionExpiryInterval!) : nil
                 )
-                call.resolve(["connected": true])
-                self.notifyListeners("connected", data: ["connected": true])
+                DispatchQueue.main.async {
+                    call.resolve(["connected": true])
+                    self.notifyListeners("connected", data: ["connected": true])
+                }
             } catch {
-                call.reject("\(error)")
+                DispatchQueue.main.async { call.reject("\(error)") }
             }
         }
     }
@@ -161,10 +163,12 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
                 try await client.subscribe(topic: topic, qos: 0, subscriptionIdentifier: nil)
                 try await client.publish(topic: topic, payload: Data(payload.utf8), qos: 0)
                 try await client.disconnect()
-                call.resolve(["success": true])
-                self.notifyListeners("subscribed", data: ["topic": topic])
+                DispatchQueue.main.async {
+                    call.resolve(["success": true])
+                    self.notifyListeners("subscribed", data: ["topic": topic])
+                }
             } catch {
-                call.reject("\(error)")
+                DispatchQueue.main.async { call.reject("\(error)") }
             }
         }
     }
@@ -173,9 +177,9 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
         Task {
             do {
                 try await client.disconnect()
-                call.resolve()
+                DispatchQueue.main.async { call.resolve() }
             } catch {
-                call.reject("\(error)")
+                DispatchQueue.main.async { call.reject("\(error)") }
             }
         }
     }
@@ -214,9 +218,9 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
                     }
                 }
                 try await client.publish(topic: topic, payload: data, qos: UInt8(min(qos, 2)), properties: properties)
-                call.resolve(["success": true])
+                DispatchQueue.main.async { call.resolve(["success": true]) }
             } catch {
-                call.reject("\(error)")
+                DispatchQueue.main.async { call.reject("\(error)") }
             }
         }
     }
@@ -238,11 +242,13 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
                 client.onMessage(topic) { [weak self] payload in
                     guard let self = self else { return }
                     let str = String(data: payload, encoding: .utf8) ?? ""
-                    self.notifyListeners("message", data: ["topic": topic, "payload": str])
+                    DispatchQueue.main.async {
+                        self.notifyListeners("message", data: ["topic": topic, "payload": str])
+                    }
                 }
-                call.resolve(["success": true])
+                DispatchQueue.main.async { call.resolve(["success": true]) }
             } catch {
-                call.reject("\(error)")
+                DispatchQueue.main.async { call.reject("\(error)") }
             }
         }
     }
@@ -258,9 +264,9 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
         Task {
             do {
                 try await client.unsubscribe(topic: topic)
-                call.resolve(["success": true])
+                DispatchQueue.main.async { call.resolve(["success": true]) }
             } catch {
-                call.reject("\(error)")
+                DispatchQueue.main.async { call.reject("\(error)") }
             }
         }
     }
