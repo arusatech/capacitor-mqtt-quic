@@ -238,7 +238,7 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
                 client.onMessage(topic) { [weak self] payload in
                     guard let self = self else { return }
                     let str = String(data: payload, encoding: .utf8) ?? ""
-                    self.notifyListeners("message", ["topic": topic, "payload": str])
+                    self.notifyListeners("message", data: ["topic": topic, "payload": str])
                 }
                 call.resolve(["success": true])
             } catch {
