@@ -63,6 +63,34 @@ await MqttQuic.unsubscribe({ topic: 'sensors/+' });
 await MqttQuic.disconnect();
 ```
 
+### Connection state and UI
+
+`connect()` returns a Promise that resolves with `{ connected: true }` only after the QUIC handshake and MQTT CONNACK. To avoid the UI staying on "connecting":
+
+- **Option A – use the Promise:** Set your UI to "connected" when the Promise resolves.
+
+```ts
+setConnectionState('connecting');
+try {
+  await MqttQuic.connect({ host, port, clientId, ... });
+  setConnectionState('connected');  // required: update here
+} catch (e) {
+  setConnectionState('error');
+}
+```
+
+- **Option B – use events:** The plugin also emits `connected` and `subscribed` (Capacitor listeners). You can rely on these instead of or in addition to the Promise:
+
+```ts
+import { MqttQuic } from '@annadata/capacitor-mqtt-quic';
+
+MqttQuic.addListener('connected', () => setConnectionState('connected'));
+MqttQuic.addListener('subscribed', (e) => { /* e.topic */ });
+// then call connect(); state will update when the event fires
+```
+
+If you only set state to "connecting" and never handle the resolution or the `connected` event, the UI will remain "connecting" even though the connection succeeded.
+
 ### TLS Certificate Verification (QUIC)
 
 QUIC requires TLS 1.3 and certificate verification is **enabled by default**.

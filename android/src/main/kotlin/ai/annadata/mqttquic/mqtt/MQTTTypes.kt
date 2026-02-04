@@ -19,6 +19,7 @@ object MQTTMessageType {
     const val PINGREQ: Byte = 0xC0
     const val PINGRESP: Byte = 0xD0
     const val DISCONNECT: Byte = 0xE0
+    const val AUTH: Byte = 0xF0
 }
 
 object MQTTConnectFlags {

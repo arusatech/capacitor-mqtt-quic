@@ -25,11 +25,12 @@ object MQTT5Protocol {
         variableHeader.addAll(MQTTProtocol.encodeString("MQTT").toList())
         variableHeader.add(MQTTProtocolLevel.V5)
         
+        // Connect Flags: bit 0 Reserved MUST be 0 [MQTT-3.1.2-3]; only set defined bits
         var flags = 0
         if (cleanStart) flags = flags or 0x02
         if (username != null) flags = flags or MQTTConnectFlags.USERNAME
         if (password != null) flags = flags or MQTTConnectFlags.PASSWORD
-        variableHeader.add(flags.toByte())
+        variableHeader.add((flags and 0xFE).toByte()) // ensure reserved bit 0 = 0
         variableHeader.add((keepalive shr 8).toByte())
         variableHeader.add((keepalive and 0xFF).toByte())
         
@@ -133,7 +134,46 @@ object MQTT5Protocol {
             *pl
         )
     }
-    
+
+    /**
+     * Parse PUBLISH variable header + payload (MQTT 5.0). Updates topicAliasMap when Topic Name and Topic Alias are present.
+     * @param data Full packet after fixed header (variable header + payload)
+     * @param offset Start offset in data
+     * @param qos QoS from fixed header (0, 1, or 2)
+     * @param topicAliasMap Mutable map alias -> topic name; updated when PUBLISH has non-empty topic and Topic Alias property; used when topic length is 0
+     * @return Triple(topic, packetId?, payload)
+     */
+    fun parsePublishV5(
+        data: ByteArray,
+        offset: Int,
+        qos: Int,
+        topicAliasMap: MutableMap<Int, String>
+    ): Triple<String, Int?, ByteArray> {
+        var pos = offset
+        val (topicName, next) = MQTTProtocol.decodeString(data, pos)
+        pos = next
+        var packetId: Int? = null
+        if (qos > 0) {
+            if (pos + 2 > data.size) throw IllegalArgumentException("Insufficient data for PUBLISH packet ID")
+            packetId = ((data[pos].toInt() and 0xFF) shl 8) or (data[pos + 1].toInt() and 0xFF)
+            pos += 2
+        }
+        val (propLen, propLenBytes) = MQTTProtocol.decodeRemainingLength(data, pos)
+        pos += propLenBytes
+        val (props, _) = MQTT5PropertyEncoder.decodeProperties(data.copyOfRange(pos, pos + propLen), 0)
+        pos += propLen
+        var topic = topicName
+        val topicAlias = props[MQTT5PropertyType.TOPIC_ALIAS.toInt()] as? Int
+        if (topic.isEmpty()) {
+            if (topicAlias == null || topicAlias == 0) throw IllegalArgumentException("PUBLISH has zero-length topic and no valid Topic Alias")
+            topic = topicAliasMap[topicAlias] ?: throw IllegalArgumentException("PUBLISH Topic Alias $topicAlias has no mapping")
+        } else if (topicAlias != null && topicAlias != 0) {
+            topicAliasMap[topicAlias] = topic
+        }
+        val payload = data.copyOfRange(pos, data.size)
+        return Triple(topic, packetId, payload)
+    }
+
     fun buildSubscribeV5(
         packetId: Int,
         topic: String,
@@ -153,7 +193,9 @@ object MQTT5Protocol {
         vh.addAll(propsLen.toList())
         vh.addAll(propsBytes.toList())
         
-        val pl = MQTTProtocol.encodeString(topic) + byteArrayOf((qos and 0x03).toByte())
+        // Subscription Options: bits 6-7 Reserved MUST be 0 [MQTT-3.8.3-5]; bits 0-1 QoS, 2 No Local, 3 RAP, 4-5 Retain Handling
+        val optionsByte = (qos and 0x03).toByte()
+        val pl = MQTTProtocol.encodeString(topic) + byteArrayOf((optionsByte.toInt() and 0x3F).toByte())
         val rem = vh.size + pl.size
         return byteArrayOf(
             (MQTTMessageType.SUBSCRIBE.toInt() or 0x02).toByte(),

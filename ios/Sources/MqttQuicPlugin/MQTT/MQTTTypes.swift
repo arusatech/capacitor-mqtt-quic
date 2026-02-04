@@ -23,6 +23,7 @@ public enum MQTTMessageType: UInt8 {
     case PINGREQ = 0xC0
     case PINGRESP = 0xD0
     case DISCONNECT = 0xE0
+    case AUTH = 0xF0
 }
 
 /// CONNECT flags

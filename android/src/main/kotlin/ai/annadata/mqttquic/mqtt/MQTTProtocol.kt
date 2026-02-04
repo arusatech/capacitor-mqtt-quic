@@ -161,6 +161,39 @@ object MQTTProtocol {
         )
     }
 
+    fun buildPubrec(packetId: Int): ByteArray {
+        return byteArrayOf(
+            MQTTMessageType.PUBREC,
+            *encodeRemainingLength(2),
+            (packetId shr 8).toByte(),
+            (packetId and 0xFF).toByte()
+        )
+    }
+
+    fun buildPubrel(packetId: Int): ByteArray {
+        return byteArrayOf(
+            MQTTMessageType.PUBREL,
+            *encodeRemainingLength(2),
+            (packetId shr 8).toByte(),
+            (packetId and 0xFF).toByte()
+        )
+    }
+
+    fun buildPubcomp(packetId: Int): ByteArray {
+        return byteArrayOf(
+            MQTTMessageType.PUBCOMP,
+            *encodeRemainingLength(2),
+            (packetId shr 8).toByte(),
+            (packetId and 0xFF).toByte()
+        )
+    }
+
+    /** Parse PUBREL variable header; returns packet identifier. */
+    fun parsePubrel(data: ByteArray, offset: Int = 0): Int {
+        if (offset + 2 > data.size) throw IllegalArgumentException("Insufficient data for PUBREL")
+        return ((data[offset].toInt() and 0xFF) shl 8) or (data[offset + 1].toInt() and 0xFF)
+    }
+
     fun parsePuback(data: ByteArray, offset: Int = 0): Int {
         if (offset + 2 > data.size) throw IllegalArgumentException("Insufficient data for PUBACK")
         return ((data[offset].toInt() and 0xFF) shl 8) or (data[offset + 1].toInt() and 0xFF)

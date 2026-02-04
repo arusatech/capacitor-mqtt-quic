@@ -29,11 +29,12 @@ public final class MQTT5Protocol {
         variableHeader.append(try MQTTProtocol.encodeString("MQTT"))
         variableHeader.append(MQTTProtocolLevel.v5)
         
+        // Connect Flags: bit 0 Reserved MUST be 0 [MQTT-3.1.2-3]; only set defined bits
         var flags: UInt8 = 0
         if cleanStart { flags |= 0x02 }
         if username != nil { flags |= MQTTConnectFlags.username }
         if password != nil { flags |= MQTTConnectFlags.password }
-        variableHeader.append(flags)
+        variableHeader.append(flags & 0xFE) // ensure reserved bit 0 = 0
         variableHeader.append(UInt8((keepalive >> 8) & 0xFF))
         variableHeader.append(UInt8(keepalive & 0xFF))
         
@@ -161,7 +162,43 @@ public final class MQTT5Protocol {
         out.append(pl)
         return out
     }
-    
+
+    /// Parse PUBLISH variable header + payload (MQTT 5.0). Updates topicAliasMap when Topic Name and Topic Alias are present.
+    /// - Returns: (topic, packetId?, payload)
+    public static func parsePublishV5(
+        _ data: Data,
+        offset: Int,
+        qos: UInt8,
+        topicAliasMap: inout [Int: String]
+    ) throws -> (String, UInt16?, Data) {
+        var pos = offset
+        let (topicName, next) = try MQTTProtocol.decodeString(data, offset: pos)
+        pos = next
+        var packetId: UInt16? = nil
+        if qos > 0 {
+            if pos + 2 > data.count { throw MQTTProtocolError.insufficientData("PUBLISH packet ID") }
+            packetId = (UInt16(data[pos] & 0xFF) << 8) | UInt16(data[pos + 1] & 0xFF)
+            pos += 2
+        }
+        let (propLen, propLenBytes) = try MQTTProtocol.decodeRemainingLength(data, offset: pos)
+        pos += propLenBytes
+        let (props, _) = try MQTT5PropertyEncoder.decodeProperties(data.subdata(in: pos..<(pos + propLen)), offset: 0)
+        pos += propLen
+        var topic = topicName
+        let topicAliasVal = props[MQTT5PropertyType.topicAlias.rawValue]
+        let topicAlias: Int? = (topicAliasVal as? UInt16).map { Int($0) } ?? (topicAliasVal as? Int)
+        if topic.isEmpty {
+            guard let alias = topicAlias, alias != 0, let t = topicAliasMap[alias] else {
+                throw MQTTProtocolError.insufficientData("PUBLISH zero-length topic and no valid Topic Alias")
+            }
+            topic = t
+        } else if let alias = topicAlias, alias != 0 {
+            topicAliasMap[alias] = topic
+        }
+        let payload = data.subdata(in: pos..<data.count)
+        return (topic, packetId, payload)
+    }
+
     public static func buildSubscribeV5(
         packetId: UInt16,
         topic: String,
@@ -183,9 +220,10 @@ public final class MQTT5Protocol {
         vh.append(contentsOf: propsLen)
         vh.append(propsBytes)
         
+        // Subscription Options: bits 6-7 Reserved MUST be 0 [MQTT-3.8.3-5]; bits 0-1 QoS, 2 No Local, 3 RAP, 4-5 Retain Handling
         var pl = Data()
         pl.append(try MQTTProtocol.encodeString(topic))
-        pl.append(qos & 0x03)
+        pl.append(UInt8((qos & 0x03) & 0x3F))
         
         let rem = vh.count + pl.count
         var out = Data()

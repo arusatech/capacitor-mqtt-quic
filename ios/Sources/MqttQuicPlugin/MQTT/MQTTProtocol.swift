@@ -205,6 +205,39 @@ public final class MQTTProtocol {
         return (UInt16(data[offset]) << 8) | UInt16(data[offset + 1])
     }
 
+    public static func buildPubrec(packetId: UInt16) -> Data {
+        var out = Data()
+        out.append(MQTTMessageType.PUBREC.rawValue)
+        out.append(contentsOf: try! encodeRemainingLength(2))
+        out.append(UInt8((packetId >> 8) & 0xFF))
+        out.append(UInt8(packetId & 0xFF))
+        return out
+    }
+
+    public static func buildPubrel(packetId: UInt16) -> Data {
+        var out = Data()
+        out.append(MQTTMessageType.PUBREL.rawValue)
+        out.append(contentsOf: try! encodeRemainingLength(2))
+        out.append(UInt8((packetId >> 8) & 0xFF))
+        out.append(UInt8(packetId & 0xFF))
+        return out
+    }
+
+    public static func buildPubcomp(packetId: UInt16) -> Data {
+        var out = Data()
+        out.append(MQTTMessageType.PUBCOMP.rawValue)
+        out.append(contentsOf: try! encodeRemainingLength(2))
+        out.append(UInt8((packetId >> 8) & 0xFF))
+        out.append(UInt8(packetId & 0xFF))
+        return out
+    }
+
+    /// Parse PUBREL variable header; returns packet identifier.
+    public static func parsePubrel(_ data: Data, offset: Int = 0) throws -> UInt16 {
+        if offset + 2 > data.count { throw MQTTProtocolError.insufficientData("PUBREL") }
+        return (UInt16(data[offset] & 0xFF) << 8) | UInt16(data[offset + 1] & 0xFF)
+    }
+
     // MARK: - SUBSCRIBE
 
     public static func buildSubscribe(packetId: UInt16, topic: String, qos: UInt8 = 0) throws -> Data {

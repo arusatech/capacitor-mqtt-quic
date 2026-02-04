@@ -26,6 +26,10 @@ public final class MQTTClient {
     private var state: State = .disconnected
     private var protocolVersion: ProtocolVersion = .auto
     private var activeProtocolVersion: UInt8 = 0  // 0x04 or 0x05
+    /// Effective keepalive in seconds (from CONNACK Server Keep Alive, or connect param).
+    private var effectiveKeepalive: UInt16 = 0
+    /// Assigned Client Identifier from CONNACK when client sent empty ClientID; nil otherwise.
+    private var assignedClientIdentifier: String?
     private var quicClient: QuicClientProtocol?
     private var stream: QuicStreamProtocol?
     private var reader: MQTTStreamReaderProtocol?
@@ -33,6 +37,8 @@ public final class MQTTClient {
     private var messageLoopTask: Task<Void, Error>?
     private var nextPacketId: UInt16 = 1
     private var subscribedTopics: [String: (Data) -> Void] = [:]
+    /// Per-connection Topic Alias map (alias -> topic name) for MQTT 5.0 incoming PUBLISH.
+    private var topicAliasMap: [Int: String] = [:]
     private let lock = NSLock()
 
     public init(protocolVersion: ProtocolVersion = .auto) {
@@ -43,6 +49,20 @@ public final class MQTTClient {
         lock.lock()
         defer { lock.unlock() }
         return state
+    }
+
+    /// Effective keepalive in seconds (Server Keep Alive from CONNACK, or value sent in CONNECT).
+    public func getEffectiveKeepalive() -> UInt16 {
+        lock.lock()
+        defer { lock.unlock() }
+        return effectiveKeepalive
+    }
+
+    /// Assigned Client Identifier from CONNACK when client sent empty ClientID; nil otherwise.
+    public func getAssignedClientIdentifier() -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        return assignedClientIdentifier
     }
 
     public func connect(host: String, port: UInt16, clientId: String, username: String?, password: String?, cleanSession: Bool, keepalive: UInt16, sessionExpiryInterval: UInt32? = nil) async throws {
@@ -109,29 +129,72 @@ public final class MQTTClient {
             try await w.write(connectData)
             try await w.drain()
 
-            // Read CONNACK
-            let (msgType, remLen, fixed) = try await readFixedHeader(r)
-            let rest = try await r.readexactly(remLen)
-            var full = Data(fixed)
-            full.append(rest)
-            let hdrLen = fixed.count
-            
-            if msgType != MQTTMessageType.CONNACK.rawValue {
-                lock.lock()
-                state = .error("expected CONNACK, got \(msgType)")
-                lock.unlock()
-                throw MQTTProtocolError.insufficientData("expected CONNACK")
+            // MQTT 5.0: server may send AUTH before CONNACK; loop until CONNACK
+            var full: Data
+            var hdrLen: Int
+            if activeProtocolVersion == MQTTProtocolLevel.v5 {
+                loop: while true {
+                    let (msgType, remLen, fixed) = try await readFixedHeader(r)
+                    let rest = try await r.readexactly(remLen)
+                    var packet = Data(fixed)
+                    packet.append(rest)
+                    full = packet
+                    hdrLen = fixed.count
+                    switch msgType {
+                    case MQTTMessageType.CONNACK.rawValue:
+                        break loop
+                    case MQTTMessageType.AUTH.rawValue:
+                        lock.lock()
+                        state = .error("Enhanced authentication not supported")
+                        lock.unlock()
+                        try? await w.write(MQTT5Protocol.buildDisconnectV5(reasonCode: .badAuthenticationMethod))
+                        try? await w.drain()
+                        try? await w.close()
+                        throw MQTTProtocolError.insufficientData("Enhanced authentication not supported")
+                    case MQTTMessageType.DISCONNECT.rawValue:
+                        lock.lock()
+                        state = .error("Server sent DISCONNECT before CONNACK")
+                        lock.unlock()
+                        throw MQTTProtocolError.insufficientData("Server sent DISCONNECT before CONNACK")
+                    default:
+                        lock.lock()
+                        state = .error("Expected CONNACK or AUTH, got \(msgType)")
+                        lock.unlock()
+                        throw MQTTProtocolError.insufficientData("Expected CONNACK or AUTH")
+                    }
+                }
+            } else {
+                let (msgType, remLen, fixed) = try await readFixedHeader(r)
+                let rest = try await r.readexactly(remLen)
+                full = Data(fixed)
+                full.append(rest)
+                hdrLen = fixed.count
+                if msgType != MQTTMessageType.CONNACK.rawValue {
+                    lock.lock()
+                    state = .error("expected CONNACK, got \(msgType)")
+                    lock.unlock()
+                    throw MQTTProtocolError.insufficientData("expected CONNACK")
+                }
             }
-            
+
             // Parse CONNACK based on protocol version
             if activeProtocolVersion == MQTTProtocolLevel.v5 {
-                let (_, reasonCode, _, _) = try MQTT5Protocol.parseConnackV5(full, offset: hdrLen)
+                let (_, reasonCode, props, _) = try MQTT5Protocol.parseConnackV5(full, offset: hdrLen)
                 if reasonCode != .success {
                     lock.lock()
                     state = .error("CONNACK refused: \(reasonCode)")
                     lock.unlock()
                     throw MQTTProtocolError.insufficientData("CONNACK refused: \(reasonCode)")
                 }
+                // [MQTT-3.2.2-21] Use Server Keep Alive from CONNACK if present
+                lock.lock()
+                if let sk = props[MQTT5PropertyType.serverKeepAlive.rawValue] as? UInt16 {
+                    effectiveKeepalive = sk
+                } else {
+                    effectiveKeepalive = keepalive
+                }
+                assignedClientIdentifier = props[MQTT5PropertyType.assignedClientIdentifier.rawValue] as? String
+                lock.unlock()
             } else {
                 let (_, returnCode) = try MQTTProtocol.parseConnack(full, offset: hdrLen)
                 if returnCode != MQTTConnAckCode.accepted.rawValue {
@@ -140,6 +203,9 @@ public final class MQTTClient {
                     lock.unlock()
                     throw MQTTProtocolError.insufficientData("CONNACK refused")
                 }
+                lock.lock()
+                effectiveKeepalive = keepalive
+                lock.unlock()
             }
 
             lock.lock()
@@ -253,6 +319,8 @@ public final class MQTTClient {
         writer = nil
         state = .disconnected
         activeProtocolVersion = 0
+        assignedClientIdentifier = nil
+        topicAliasMap.removeAll()
         lock.unlock()
 
         if let w = w {
@@ -320,6 +388,18 @@ public final class MQTTClient {
                     self.lock.unlock()
 
                     switch type {
+                    case MQTTMessageType.DISCONNECT.rawValue:
+                        let reasonCode: UInt8 = rest.first ?? 0x00
+                        self.lock.lock()
+                        self.quicClient = nil
+                        self.stream = nil
+                        self.reader = nil
+                        self.writer = nil
+                        self.assignedClientIdentifier = nil
+                        self.topicAliasMap.removeAll()
+                        self.state = reasonCode >= 0x80 ? .error("Server DISCONNECT: \(reasonCode)") : .disconnected
+                        self.lock.unlock()
+                        return
                     case MQTTMessageType.PINGREQ.rawValue:
                         if let w = w {
                             let pr = MQTTProtocol.buildPingresp()
@@ -328,7 +408,25 @@ public final class MQTTClient {
                         }
                     case MQTTMessageType.PUBLISH.rawValue:
                         let qos = (msgType >> 1) & 0x03
-                        let (topic, packetId, payload, _) = try MQTTProtocol.parsePublish(Data(rest), offset: 0, qos: qos)
+                        let topic: String
+                        let packetId: UInt16?
+                        let payload: Data
+                        self.lock.lock()
+                        let version = self.activeProtocolVersion
+                        if version == MQTTProtocolLevel.v5 {
+                            var map = self.topicAliasMap
+                            self.lock.unlock()
+                            (topic, packetId, payload) = try MQTT5Protocol.parsePublishV5(Data(rest), offset: 0, qos: UInt8(qos), topicAliasMap: &map)
+                            self.lock.lock()
+                            self.topicAliasMap = map
+                            self.lock.unlock()
+                        } else {
+                            self.lock.unlock()
+                            let (t, pid, pl, _) = try MQTTProtocol.parsePublish(Data(rest), offset: 0, qos: UInt8(qos))
+                            topic = t
+                            packetId = pid
+                            payload = pl
+                        }
 
                         self.lock.lock()
                         let cb = self.subscribedTopics[topic]
