@@ -5,6 +5,7 @@
 #include <ngtcp2/ngtcp2_crypto_wolfssl.h>
 
 #include <wolfssl/ssl.h>
+#include <wolfssl/wolfcrypt/logging.h>
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -326,6 +327,11 @@ class QuicClient {
       return -1;
     }
     wolfSSL_CTX_set_verify(ssl_ctx_, WOLFSSL_VERIFY_PEER, nullptr);
+
+    /* Optional: enable wolfSSL debug output when MQTT_QUIC_WOLFSSL_DEBUG is set (e.g. for ERR_CRYPTO) */
+    if (std::getenv("MQTT_QUIC_WOLFSSL_DEBUG") != nullptr) {
+      wolfSSL_Debugging_ON();
+    }
 
     ssl_ = wolfSSL_new(ssl_ctx_);
     if (!ssl_) {

@@ -7,7 +7,10 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import android.os.Handler
+import android.os.Looper
 import android.system.Os
+import android.util.Base64
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -85,6 +88,18 @@ class MqttQuicPlugin : Plugin() {
                     client.disconnect()
                 }
                 client = MQTTClient(protocolVersion)
+                // Forward every incoming PUBLISH to JS so addListener('message', ...) receives topic + payload
+                client.onPublish = { topic, payload ->
+                    val payloadStr = try {
+                        String(payload, StandardCharsets.UTF_8)
+                    } catch (_: Exception) {
+                        Base64.encodeToString(payload, Base64.NO_WRAP)
+                    }
+                    val data = JSObject().put("topic", topic).put("payload", payloadStr)
+                    Handler(Looper.getMainLooper()).post {
+                        notifyListeners("message", data)
+                    }
+                }
                 client.connect(host, port, clientId, username, password, cleanSession, keepalive, sessionExpiryInterval)
                 call.resolve(JSObject().put("connected", true))
                 notifyListeners("connected", JSObject().put("connected", true))

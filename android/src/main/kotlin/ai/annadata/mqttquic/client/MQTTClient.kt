@@ -57,6 +57,9 @@ class MQTTClient {
     private var keepaliveJob: kotlinx.coroutines.Job? = null
     private var nextPacketId = 1
     private val subscribedTopics = mutableMapOf<String, (ByteArray) -> Unit>()
+    /** Optional global callback for every incoming PUBLISH (topic, payload). Used by plugin to forward to JS. */
+    @Volatile
+    var onPublish: ((String, ByteArray) -> Unit)? = null
     /** Per-connection Topic Alias map (alias -> topic name) for MQTT 5.0 incoming PUBLISH. */
     private val topicAliasMap = mutableMapOf<Int, String>()
     private val lock = Mutex()
@@ -430,9 +433,10 @@ class MQTTClient {
                                 }
                             }
 
-                            val (cb, _) = lock.withLock {
-                                subscribedTopics[topic] to activeProtocolVersion
+                            val (cb, globalCb) = lock.withLock {
+                                subscribedTopics[topic] to onPublish
                             }
+                            globalCb?.invoke(topic, payload)
                             cb?.invoke(payload)
 
                             if (qos >= 1 && packetId != null) {

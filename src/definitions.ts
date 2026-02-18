@@ -15,6 +15,25 @@ export interface MqttQuicConnectOptions {
   receiveMaximum?: number;  // MQTT 5.0
   maximumPacketSize?: number;  // MQTT 5.0
   topicAliasMaximum?: number;  // MQTT 5.0
+  /**
+   * Web only: use QUIC via WebTransport (browser's HTTP/3). Ignored on native.
+   *
+   * URL path convention (similar to MQTT topic structure): data is available at
+   *   https://host:443/mqtt-wt/devices/<deviceId>/<action>/<Path>
+   * e.g. https://mqtt.annadata.cloud:443/mqtt-wt/devices/mydevice/subscribe/sensors/temp
+   *
+   * You can either:
+   * - Pass the full URL in webTransportUrl, or
+   * - Pass the base URL in webTransportUrl and optional webTransportDeviceId, webTransportAction,
+   *   webTransportPath; the plugin will build the path as .../devices/<id>/<action>/<path>.
+   */
+  webTransportUrl?: string;
+  /** Web only: device ID for path (used with webTransportUrl base). */
+  webTransportDeviceId?: string;
+  /** Web only: action segment, e.g. 'subscribe' | 'publish'. */
+  webTransportAction?: string;
+  /** Web only: path segment(s), e.g. 'sensors/temp' (like MQTT topic suffix). */
+  webTransportPath?: string;
 }
 
 export interface MqttQuicPublishOptions {
@@ -47,6 +66,7 @@ export interface MqttQuicTestHarnessOptions {
   payload?: string;
   caFile?: string;
   caPath?: string;
+  webTransportUrl?: string;  // Web only: use QUIC via WebTransport
 }
 
 export interface MqttQuicPingOptions {

@@ -31,7 +31,7 @@ print_error() {
 }
 
 # Get script directory and project root (plugin root = where this script lives)
-# Dependency sources (openssl, nghttp3, ngtcp2) are cloned into PROJECT_DIR/deps/ if missing
+# Dependency sources (wolfssl or openssl, nghttp3, ngtcp2) are cloned into PROJECT_DIR/deps/ if missing
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="${PROJECT_DIR:-$SCRIPT_DIR}"
 # Default TLS backend: WolfSSL (single source of truth)

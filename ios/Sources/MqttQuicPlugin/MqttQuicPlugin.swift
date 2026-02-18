@@ -42,6 +42,12 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     private func bundledCaPath() -> String? {
+        // Prefer app bundle so TLS works when installed from npm pack (pod resources may be in separate .bundle)
+        if let mainPath = Bundle.main.path(forResource: "mqttquic_ca", ofType: "pem"),
+           let mainContents = try? String(contentsOfFile: mainPath),
+           mainContents.contains("BEGIN CERTIFICATE") {
+            return mainPath
+        }
         let bundle = Bundle(for: MqttQuicPlugin.self)
         guard let path = bundle.path(forResource: "mqttquic_ca", ofType: "pem") else {
             return nil

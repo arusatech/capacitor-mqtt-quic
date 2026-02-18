@@ -11,28 +11,22 @@ if(NOT ANDROID_PLATFORM)
     set(ANDROID_PLATFORM android-21)
 endif()
 
-# Default OpenSSL path (can be overridden via -DOPENSSL_ROOT_DIR=...)
-if(NOT OPENSSL_ROOT_DIR)
-    set(OPENSSL_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../install/openssl-android" CACHE PATH "Path to OpenSSL for Android")
-    # ABI-aware layout: allow installs under .../openssl-android/<abi>
-    if(EXISTS "${OPENSSL_ROOT_DIR}/${ANDROID_ABI}")
-        set(OPENSSL_ROOT_DIR "${OPENSSL_ROOT_DIR}/${ANDROID_ABI}" CACHE PATH "Path to OpenSSL for Android (ABI)" FORCE)
+# WolfSSL path (same layout as iOS: TLS backend for ngtcp2). Override via -DWOLFSSL_ROOT_DIR=...
+if(NOT WOLFSSL_ROOT_DIR)
+    set(WOLFSSL_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../install/wolfssl-android" CACHE PATH "Path to WolfSSL for Android")
+    if(EXISTS "${WOLFSSL_ROOT_DIR}/${ANDROID_ABI}")
+        set(WOLFSSL_ROOT_DIR "${WOLFSSL_ROOT_DIR}/${ANDROID_ABI}" CACHE PATH "Path to WolfSSL for Android (ABI)" FORCE)
     endif()
 endif()
-
-# Help FindOpenSSL by pointing at explicit locations when present
-if(NOT OPENSSL_INCLUDE_DIR AND EXISTS "${OPENSSL_ROOT_DIR}/include")
-    set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include")
+if(NOT WOLFSSL_INCLUDE_DIR AND EXISTS "${WOLFSSL_ROOT_DIR}/include")
+    set(WOLFSSL_INCLUDE_DIR "${WOLFSSL_ROOT_DIR}/include")
 endif()
-if(NOT OPENSSL_CRYPTO_LIBRARY AND EXISTS "${OPENSSL_ROOT_DIR}/lib/libcrypto.a")
-    set(OPENSSL_CRYPTO_LIBRARY "${OPENSSL_ROOT_DIR}/lib/libcrypto.a")
+if(NOT WOLFSSL_LIBRARY AND EXISTS "${WOLFSSL_ROOT_DIR}/lib/libwolfssl.a")
+    set(WOLFSSL_LIBRARY "${WOLFSSL_ROOT_DIR}/lib/libwolfssl.a")
 endif()
-if(NOT OPENSSL_SSL_LIBRARY AND EXISTS "${OPENSSL_ROOT_DIR}/lib/libssl.a")
-    set(OPENSSL_SSL_LIBRARY "${OPENSSL_ROOT_DIR}/lib/libssl.a")
+if(NOT WOLFSSL_LIBRARY OR NOT WOLFSSL_INCLUDE_DIR)
+    message(FATAL_ERROR "WolfSSL not found. Build it first: cd android && ./build-wolfssl.sh --abi ${ANDROID_ABI}. Then run ./build-ngtcp2.sh (default uses WolfSSL).")
 endif()
-
-# Find required packages
-find_package(OpenSSL REQUIRED)
 
 # ngtcp2 install/source directories (adjust as needed)
 if(NOT NGTCP2_INSTALL_DIR)
@@ -52,7 +46,7 @@ if(NOT NGHTTP3_INSTALL_DIR)
 endif()
 set(NGHTTP3_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../nghttp3" CACHE PATH "Path to nghttp3 source")
 
-# Prefer installed libraries, fallback to source build
+# Prefer installed libraries (WolfSSL backend: libngtcp2_crypto_wolfssl.a), fallback to source build
 set(NGTCP2_INCLUDE_DIR "")
 set(NGTCP2_LIBRARY "")
 set(NGTCP2_CRYPTO_LIBRARY "")
@@ -63,10 +57,10 @@ if(EXISTS "${NGTCP2_INSTALL_DIR}/include/ngtcp2/ngtcp2.h")
     elseif(EXISTS "${NGTCP2_INSTALL_DIR}/lib/libngtcp2.so")
         set(NGTCP2_LIBRARY "${NGTCP2_INSTALL_DIR}/lib/libngtcp2.so")
     endif()
-    if(EXISTS "${NGTCP2_INSTALL_DIR}/lib/libngtcp2_crypto_quictls.a")
-        set(NGTCP2_CRYPTO_LIBRARY "${NGTCP2_INSTALL_DIR}/lib/libngtcp2_crypto_quictls.a")
-    elseif(EXISTS "${NGTCP2_INSTALL_DIR}/lib/libngtcp2_crypto_quictls.so")
-        set(NGTCP2_CRYPTO_LIBRARY "${NGTCP2_INSTALL_DIR}/lib/libngtcp2_crypto_quictls.so")
+    if(EXISTS "${NGTCP2_INSTALL_DIR}/lib/libngtcp2_crypto_wolfssl.a")
+        set(NGTCP2_CRYPTO_LIBRARY "${NGTCP2_INSTALL_DIR}/lib/libngtcp2_crypto_wolfssl.a")
+    elseif(EXISTS "${NGTCP2_INSTALL_DIR}/lib/libngtcp2_crypto_wolfssl.so")
+        set(NGTCP2_CRYPTO_LIBRARY "${NGTCP2_INSTALL_DIR}/lib/libngtcp2_crypto_wolfssl.so")
     endif()
 else()
     if(NOT EXISTS "${NGTCP2_SOURCE_DIR}/lib/includes/ngtcp2/ngtcp2.h" AND NOT EXISTS "${NGTCP2_SOURCE_DIR}/lib/ngtcp2.h")
@@ -114,14 +108,12 @@ target_include_directories(ngtcp2_client PRIVATE
     ${NGHTTP3_INCLUDE_DIR}
     ${NGTCP2_SOURCE_DIR}/lib/includes
     ${NGHTTP3_SOURCE_DIR}/lib/includes
-    ${OpenSSL_INCLUDE_DIR}
+    ${WOLFSSL_INCLUDE_DIR}
 )
 
-# Link libraries
+# Link libraries: WolfSSL + ngtcp2 (same TLS backend as iOS)
 target_link_libraries(ngtcp2_client
-    # OpenSSL
-    ${OpenSSL_LIBRARIES}
-    # Android log
+    ${WOLFSSL_LIBRARY}
     log
 )
 

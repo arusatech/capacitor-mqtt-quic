@@ -4,12 +4,17 @@
 build/
 install/
 .gradle/
+# Exclude generic libs/include but KEEP ios/libs and ios/include (production vendored libs)
 libs/
 include/
+!ios/libs/
+!ios/libs/**
+!ios/include/
+!ios/include/**
 
 # Platform-specific build artifacts (explicit paths)
 android/build/
-android/install/
+# android/install/ - NOT excluded: ship prebuilt WolfSSL (wolfssl-android) when present for zero-config
 android/.gradle/
 android/local.properties
 ios/build/
@@ -20,8 +25,7 @@ ios/install/
 # But KEEP ios/libs/*.a and ios/include/ (needed by podspec)
 android/build/**/*.a
 android/build/**/*.so
-android/install/**/*.a
-android/install/**/*.so
+# Do NOT exclude android/install/** - prebuilt WolfSSL .a files are shipped for zero-config
 ios/build/**/*.a
 ios/build/**/*.dylib
 ios/install/**/*.a
@@ -44,7 +48,7 @@ nghttp3-*/
 # iOS build artifacts
 ios/install/
 ios/build/
-# Note: ios/libs/ and ios/include/ are KEPT for vendored_libraries in podspec
+# ios/libs/ and ios/include/ are KEPT (see negations above) for vendored_libraries in podspec
 *.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
 *.xcworkspace/xcshareddata/
@@ -54,8 +58,7 @@ DerivedData/
 *.dSYM.zip
 *.dSYM
 
-# Android build artifacts
-android/install/
+# Android build artifacts (keep android/install for prebuilt WolfSSL)
 android/build/
 android/.gradle/
 android/local.properties

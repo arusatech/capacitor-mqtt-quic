@@ -1,4 +1,7 @@
+import { WebPlugin } from '@capacitor/core';
 import mqtt, { type MqttClient, type IClientOptions, type IClientPublishOptions } from 'mqtt';
+import * as mqttPacket from 'mqtt-packet';
+import type { Packet, IConnectPacket, IPublishPacket, ISubscribePacket, IUnsubscribePacket } from 'mqtt-packet';
 import type {
   MqttQuicConnectOptions,
   MqttQuicPingOptions,
@@ -7,13 +10,32 @@ import type {
   MqttQuicTestHarnessOptions,
 } from './definitions';
 
+declare const WebTransport: typeof globalThis extends { WebTransport: infer W } ? W : unknown;
+
 /**
- * Web/PWA implementation: MQTT over WebSocket (WSS).
- * Browsers cannot use ngtcp2/QUIC; mqtt.js over WSS is used as fallback.
+ * Web / browser implementation: MQTT over WebSocket (WSS) or over WebTransport (QUIC).
+ * Browsers cannot run ngtcp2/WolfSSL (no UDP). Same API as iOS/Android.
+ * - Default: WSS via mqtt.js.
+ * - Optional: pass webTransportUrl to use the browser's QUIC (HTTP/3) via WebTransport.
  */
-export class MqttQuicWeb {
+export class MqttQuicWeb extends WebPlugin {
   private client: MqttClient | null = null;
   private protocol: 'ws' | 'wss' = 'wss';
+
+  private wt: InstanceType<typeof WebTransport> | null = null;
+  private wtWriter: WritableStreamDefaultWriter<Uint8Array> | null = null;
+  private wtReadAbort: AbortController | null = null;
+  private wtParser: ReturnType<typeof mqttPacket.parser> | null = null;
+  private wtReadBuffer: Uint8Array[] = [];
+  private wtNextMessageId = 1;
+  private wtConnackResolve: ((value: void) => void) | null = null;
+  private wtPendingSuback = new Map<number, { resolve: () => void; topic: string }>();
+  private wtPendingUnsuback = new Map<number, { resolve: () => void }>();
+  private wtConnected = false;
+
+  constructor() {
+    super();
+  }
 
   /** Web: no UDP; resolves ok if host looks valid. Native uses UDP reachability check. */
   async ping(_options: MqttQuicPingOptions): Promise<{ ok: boolean }> {
@@ -21,6 +43,138 @@ export class MqttQuicWeb {
   }
 
   async connect(options: MqttQuicConnectOptions): Promise<{ connected: boolean }> {
+    if (options.webTransportUrl && typeof WebTransport !== 'undefined') {
+      return this.connectWebTransport(options);
+    }
+    return this.connectWSS(options);
+  }
+
+  /**
+   * Build WebTransport URL. If path components are provided, appends
+   * /devices/<deviceId>/<action>/<path> (like MQTT topic structure).
+   */
+  private getWebTransportUrl(options: MqttQuicConnectOptions): string {
+    let base = (options.webTransportUrl ?? '').replace(/\/$/, '');
+    const deviceId = options.webTransportDeviceId;
+    const action = options.webTransportAction;
+    const path = options.webTransportPath;
+    if (deviceId != null && deviceId !== '' && action != null && action !== '') {
+      const pathSegment = path != null && path !== '' ? `/${path.replace(/^\/+/, '')}` : '';
+      base = `${base}/devices/${encodeURIComponent(deviceId)}/${encodeURIComponent(action)}${pathSegment}`;
+    }
+    return base;
+  }
+
+  private async connectWebTransport(options: MqttQuicConnectOptions): Promise<{ connected: boolean }> {
+    if (this.wtConnected && this.wt) {
+      return { connected: true };
+    }
+    const url = this.getWebTransportUrl(options);
+    const transport = new (WebTransport as new (u: string) => InstanceType<typeof WebTransport>)(url);
+    await transport.ready;
+    const stream = await transport.createBidirectionalStream();
+    this.wt = transport;
+    this.wtWriter = stream.writable.getWriter();
+    this.wtReadAbort = new AbortController();
+    this.wtParser = mqttPacket.parser();
+    this.wtReadBuffer = [];
+    this.wtNextMessageId = 1;
+    this.wtPendingSuback.clear();
+    this.wtPendingUnsuback.clear();
+
+    let connackTimer: ReturnType<typeof setTimeout> | null = null;
+    const connackPromise = new Promise<void>((resolve, reject) => {
+      this.wtConnackResolve = () => {
+        if (connackTimer) clearTimeout(connackTimer);
+        resolve();
+      };
+      connackTimer = setTimeout(() => {
+        connackTimer = null;
+        this.wtConnackResolve = null;
+        reject(new Error('WebTransport CONNACK timeout'));
+      }, 15_000);
+    });
+
+    this.wtParser.on('packet', (packet: Packet) => {
+      if (packet.cmd === 'connack') {
+        this.wtConnected = true;
+        if (this.wtConnackResolve) {
+          const r = this.wtConnackResolve;
+          this.wtConnackResolve = null;
+          r();
+        }
+        this.notifyListeners('connected', { connected: true });
+        return;
+      }
+      if (packet.cmd === 'publish') {
+        const p = packet as IPublishPacket;
+        const payload = typeof p.payload === 'string' ? p.payload : (p.payload && Buffer.isBuffer(p.payload) ? p.payload.toString('utf8') : String(p.payload));
+        this.notifyListeners('message', { topic: p.topic, payload });
+        return;
+      }
+      if (packet.cmd === 'suback' && packet.messageId !== undefined) {
+        const cb = this.wtPendingSuback.get(packet.messageId);
+        if (cb) {
+          this.wtPendingSuback.delete(packet.messageId);
+          this.notifyListeners('subscribed', { topic: cb.topic });
+          cb.resolve();
+        }
+        return;
+      }
+      if (packet.cmd === 'unsuback' && packet.messageId !== undefined) {
+        const cb = this.wtPendingUnsuback.get(packet.messageId);
+        if (cb) {
+          this.wtPendingUnsuback.delete(packet.messageId);
+          cb.resolve();
+        }
+      }
+    });
+
+    this.wtReadLoop(stream.readable);
+
+    const pv = options.protocolVersion ?? 'auto';
+    const ver: 4 | 5 = pv === '3.1.1' ? 4 : 5;
+    const connectPacket: IConnectPacket = {
+      cmd: 'connect',
+      clientId: options.clientId,
+      protocolVersion: ver,
+      protocolId: 'MQTT',
+      clean: options.cleanSession ?? true,
+      keepalive: options.keepalive ?? 20,
+      username: options.username,
+      password: options.password ? Buffer.from(options.password, 'utf8') : undefined,
+      properties: ver === 5 && options.sessionExpiryInterval != null ? { sessionExpiryInterval: options.sessionExpiryInterval } : undefined,
+    };
+    const buf = mqttPacket.generate(connectPacket);
+    await this.wtWrite(buf);
+    await connackPromise;
+    return { connected: true };
+  }
+
+  private async wtWrite(data: Buffer | Uint8Array): Promise<void> {
+    if (!this.wtWriter) return;
+    const chunk = data instanceof Buffer ? new Uint8Array(data) : data;
+    await this.wtWriter.write(chunk);
+  }
+
+  private async wtReadLoop(readable: ReadableStream<Uint8Array>): Promise<void> {
+    const reader = readable.getReader();
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (this.wtParser && value.length > 0) {
+          this.wtParser.parse(Buffer.from(value));
+        }
+      }
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') this.wtConnected = false;
+    } finally {
+      reader.releaseLock();
+    }
+  }
+
+  private async connectWSS(options: MqttQuicConnectOptions): Promise<{ connected: boolean }> {
     return new Promise((resolve, reject) => {
       if (this.client?.connected) {
         resolve({ connected: true });
@@ -69,6 +223,11 @@ export class MqttQuicWeb {
 
       const onConnect = () => {
         this.client!.removeListener('error', onError);
+        this.client!.on('message', (topic: string, payload: Buffer) => {
+          const str = payload.toString('utf8');
+          this.notifyListeners('message', { topic, payload: str });
+        });
+        this.notifyListeners('connected', { connected: true });
         resolve({ connected: true });
       };
 
@@ -83,6 +242,20 @@ export class MqttQuicWeb {
   }
 
   async disconnect(): Promise<void> {
+    if (this.wt) {
+      this.wtReadAbort?.abort();
+      try {
+        await this.wtWriter?.close();
+        await this.wt.close();
+      } catch (_) {}
+      this.wt = null;
+      this.wtWriter = null;
+      this.wtParser = null;
+      this.wtConnected = false;
+      this.wtPendingSuback.clear();
+      this.wtPendingUnsuback.clear();
+      return;
+    }
     return new Promise((resolve) => {
       if (!this.client) {
         resolve();
@@ -96,6 +269,30 @@ export class MqttQuicWeb {
   }
 
   async publish(options: MqttQuicPublishOptions): Promise<{ success: boolean }> {
+    if (this.wtConnected && this.wtWriter) {
+      const payload = typeof options.payload === 'string' ? Buffer.from(options.payload, 'utf8') : Buffer.from(options.payload);
+      const packet: IPublishPacket = {
+        cmd: 'publish',
+        topic: options.topic,
+        payload,
+        qos: (options.qos ?? 0) as 0 | 1 | 2,
+        dup: false,
+        retain: options.retain ?? false,
+        messageId: (options.qos ?? 0) > 0 ? this.wtNextMessageId++ : undefined,
+        properties: options.contentType || options.responseTopic || options.userProperties?.length
+          ? {
+              contentType: options.contentType,
+              responseTopic: options.responseTopic,
+              correlationData: options.correlationData != null ? Buffer.from(options.correlationData as ArrayBuffer) : undefined,
+              userProperties: options.userProperties?.length ? Object.fromEntries(options.userProperties.map((p) => [p.name, p.value])) : undefined,
+              messageExpiryInterval: options.messageExpiryInterval,
+            }
+          : undefined,
+      };
+      const buf = mqttPacket.generate(packet);
+      await this.wtWrite(buf);
+      return { success: true };
+    }
     return new Promise((resolve, reject) => {
       if (!this.client?.connected) {
         reject(new Error('Not connected'));
@@ -136,6 +333,21 @@ export class MqttQuicWeb {
   }
 
   async subscribe(options: MqttQuicSubscribeOptions): Promise<{ success: boolean }> {
+    if (this.wtConnected && this.wtWriter) {
+      const messageId = this.wtNextMessageId++;
+      const subackPromise = new Promise<void>((resolve) => {
+        this.wtPendingSuback.set(messageId, { resolve, topic: options.topic });
+      });
+      const packet: ISubscribePacket = {
+        cmd: 'subscribe',
+        messageId,
+        subscriptions: [{ topic: options.topic, qos: (options.qos ?? 0) as 0 | 1 | 2 }],
+        properties: options.subscriptionIdentifier != null ? { subscriptionIdentifier: options.subscriptionIdentifier } : undefined,
+      };
+      await this.wtWrite(mqttPacket.generate(packet));
+      await subackPromise;
+      return { success: true };
+    }
     return new Promise((resolve, reject) => {
       if (!this.client?.connected) {
         reject(new Error('Not connected'));
@@ -151,12 +363,29 @@ export class MqttQuicWeb {
 
       this.client!.subscribe(options.topic, opts, (err) => {
         if (err) reject(err);
-        else resolve({ success: true });
+        else {
+          this.notifyListeners('subscribed', { topic: options.topic });
+          resolve({ success: true });
+        }
       });
     });
   }
 
   async unsubscribe(options: { topic: string }): Promise<{ success: boolean }> {
+    if (this.wtConnected && this.wtWriter) {
+      const messageId = this.wtNextMessageId++;
+      const unsubackPromise = new Promise<void>((resolve) => {
+        this.wtPendingUnsuback.set(messageId, { resolve });
+      });
+      const packet: IUnsubscribePacket = {
+        cmd: 'unsubscribe',
+        messageId,
+        unsubscriptions: [options.topic],
+      };
+      await this.wtWrite(mqttPacket.generate(packet));
+      await unsubackPromise;
+      return { success: true };
+    }
     return new Promise((resolve, reject) => {
       if (!this.client?.connected) {
         reject(new Error('Not connected'));
@@ -184,6 +413,7 @@ export class MqttQuicWeb {
         clientId,
         cleanSession: true,
         keepalive: 20,
+        ...(options.webTransportUrl && { webTransportUrl: options.webTransportUrl }),
       });
       await this.subscribe({ topic, qos: 0 });
       await this.publish({ topic, payload, qos: 0 });

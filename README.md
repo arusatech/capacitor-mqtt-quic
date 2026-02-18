@@ -1,8 +1,8 @@
 # @annadata/capacitor-mqtt-quic
 
-MQTT-over-QUIC Capacitor plugin for iOS and Android. Uses ngtcp2 for QUIC on native; MQTT over WebSocket (WSS) fallback on web.
+MQTT-over-QUIC Capacitor plugin for **iOS**, **Android**, and **Web (browser/PWA)**. Native: ngtcp2 + WolfSSL for QUIC; Web: MQTT over WebSocket (WSS), same API and event listeners.
 
-**Capacitor:** Supports **Capacitor >= 7.0.0** (including Capacitor 8). See [CAPACITOR_VERSION_SUPPORT.md](./CAPACITOR_VERSION_SUPPORT.md) for details.
+**Capacitor:** Supports **Capacitor 7** and **Capacitor 8**.
 
 **Features:**
 - ✅ **MQTT 5.0** support with full properties and reason codes
@@ -330,7 +330,7 @@ interface MqttQuicTestHarnessOptions {
 
 ## ngtcp2 Build (Phase 2) ⏳
 
-**Current Status:** Real QUIC transport implemented using ngtcp2 + quictls (OpenSSL fork).
+**Current Status:** Real QUIC transport implemented using ngtcp2 + **WolfSSL** on both iOS and Android (single TLS backend for license/size/QUIC support).
 
 ### Quick Build (Recommended)
 
@@ -350,7 +350,7 @@ Use the unified build script to build all native dependencies:
 ./build-native.sh --android-only --abi arm64-v8a
 ```
 
-This script builds OpenSSL (quictls) → nghttp3 → ngtcp2 in the correct order for both platforms.
+This script builds WolfSSL → nghttp3 → ngtcp2 in the correct order for both platforms (or OpenSSL/QuicTLS when USE_WOLFSSL=0).
 
 ### Manual Build
 
@@ -362,6 +362,47 @@ For detailed manual build instructions, see:
 **Prerequisites:**
 - iOS: macOS with Xcode 14+
 - Android: Android Studio with NDK r25+ (auto-detected from `$ANDROID_HOME`)
+
+## Production / First-time build
+
+When you install the plugin from npm (`npm install @annadata/capacitor-mqtt-quic`), the published package may include **prebuilt native libs** (iOS and optionally Android, both using **WolfSSL**). In that case you only need:
+
+```bash
+npm install @annadata/capacitor-mqtt-quic
+npx cap sync
+```
+
+**If your Android build fails with "WolfSSL not found"**, run this **one-time** setup from your app project root (requires Android NDK r25+). Both iOS and Android use **WolfSSL** as the TLS backend (license/size/QUIC support):
+
+```bash
+cd node_modules/@annadata/capacitor-mqtt-quic
+./build-native.sh --android-only --abi arm64-v8a
+./build-native.sh --android-only --abi armeabi-v7a
+./build-native.sh --android-only --abi x86_64
+```
+
+Or from the plugin’s `android` directory:
+
+```bash
+cd node_modules/@annadata/capacitor-mqtt-quic/android
+./build-wolfssl.sh --abi arm64-v8a
+./build-wolfssl.sh --abi armeabi-v7a
+./build-wolfssl.sh --abi x86_64
+./build-nghttp3.sh --abi arm64-v8a
+./build-nghttp3.sh --abi armeabi-v7a
+./build-nghttp3.sh --abi x86_64
+./build-ngtcp2.sh --abi arm64-v8a
+./build-ngtcp2.sh --abi armeabi-v7a
+./build-ngtcp2.sh --abi x86_64
+```
+
+Or add to your app’s `package.json` and run once:
+
+```json
+"setup:wolfssl-android": "cd node_modules/@annadata/capacitor-mqtt-quic && ./build-native.sh --android-only --abi arm64-v8a && ./build-native.sh --android-only --abi armeabi-v7a && ./build-native.sh --android-only --abi x86_64"
+```
+
+**iOS:** The plugin ships with vendored static libs (`ios/libs/`) using WolfSSL. If you built the plugin from source and those are missing, run from the plugin repo: `./build-native.sh --ios-only`, then pack/publish.
 
 ## Development
 
@@ -400,6 +441,10 @@ await MqttQuic.connect({
 });
 ```
 
+## Publishing (maintainers)
+
+To pack the plugin **with native libs** and publish to npm, follow **[PRODUCTION_PUBLISH_STEPS.md](./PRODUCTION_PUBLISH_STEPS.md)**.
+
 ## Documentation
 
 - [Implementation Summary](./IMPLEMENTATION_SUMMARY.md) - Complete project overview
@@ -407,22 +452,86 @@ await MqttQuic.connect({
 - [ngtcp2 Integration Plan](./NGTCP2_INTEGRATION_PLAN.md) - Build instructions for real QUIC
 - [MQTT Version Analysis](./MQTT_VERSION_ANALYSIS.md) - Why MQTT 5.0?
 
-## Web/PWA Support
+## Web / browser support
 
-On **web** (including PWA), the plugin uses **MQTT over WebSocket (WSS)** via `mqtt.js`. No QUIC; same API.
+The plugin runs in **browsers** (including PWA and `cap run web`) with the **same API** as iOS and Android.
 
-- **Connect:** `ws://host:port` or `wss://host:port` (wss when port is 8884 or 443)
-- **Build:** Ensure `mqtt` is installed (`npm install` in the plugin directory)
-- Use `MqttQuic.connect` / `publish` / `subscribe` / `unsubscribe` / `disconnect` as on native
+**Why web can’t use ngtcp2 + WolfSSL:** Browsers do not expose raw UDP or the TLS APIs ngtcp2/WolfSSL need. So the native stack cannot run in the browser. On web: (1) **Default:** MQTT over **WebSocket (WSS)** via `mqtt.js`. (2) **Optional:** MQTT over **WebTransport** (QUIC)—pass `webTransportUrl` in `connect()` when your server supports WebTransport; the browser uses its built-in HTTP/3/QUIC stack.
+
+- **Connect:** `ws://host:port` or `wss://host:port` (the plugin uses WSS when port is 8884 or 443, otherwise `ws`)
+- **Same methods:** `MqttQuic.connect`, `publish`, `subscribe`, `unsubscribe`, `disconnect`, `testHarness`
+
+**My MQTT+QUIC server is on port 1884 – can WSS connect?**  
+Port **1884** is usually **MQTT over QUIC** (UDP). A **WSS client cannot connect directly to 1884**, because WSS is TCP/WebSocket and 1884 is QUIC. You need one of:
+
+1. **Server also exposes MQTT over WebSocket**  
+   Many brokers listen on two ports: e.g. **1884** for MQTT-over-QUIC and **8884** (or 8084) for MQTT-over-WebSocket Secure. From the **web** plugin, connect to the **WebSocket port** (e.g. 8884), not 1884:
+   ```ts
+   await MqttQuic.connect({ host: 'your-server.com', port: 8884, clientId: 'web-client' });
+   ```
+   The plugin will use `wss://your-server.com:8884`.
+
+2. **Proxy/gateway**  
+   Run a gateway that listens for WSS (e.g. on 8884) and forwards MQTT to your QUIC server on 1884. The web client then connects to the gateway’s WSS port.
+
+3. **Native or WebTransport**  
+   On **iOS/Android** use the same host and **port 1884** (QUIC). On **web**, if the server supports **WebTransport**, use `webTransportUrl` (see example below) so the browser uses QUIC via WebTransport.
+- **Same events:** `MqttQuic.addListener('connected', ...)`, `addListener('subscribed', ...)`, `addListener('message', (e) => { e.topic, e.payload })`
+- **Build:** The plugin bundles `mqtt`; no extra install in the app.
+
+Example in a browser or PWA:
+
+```ts
+import { MqttQuic } from '@annadata/capacitor-mqtt-quic';
+
+MqttQuic.addListener('message', (e) => console.log(e.topic, e.payload));
+await MqttQuic.connect({ host: 'broker.example.com', port: 8884, clientId: 'web-client' });
+await MqttQuic.subscribe({ topic: 'sensors/#' });
+```
+
+Example with QUIC on web (WebTransport; server must support WebTransport and MQTT over it):
+
+```ts
+await MqttQuic.connect({
+  webTransportUrl: 'https://broker.example.com:443/mqtt-wt',
+  clientId: 'web-quic-client',
+  host: 'broker.example.com',
+  port: 443,
+});
+```
+
+When the server uses path-based routing (like MQTT topics), data is at `.../devices/<deviceId>/<action>/<Path>`. You can pass the base URL and path components; the plugin builds the full URL:
+
+```ts
+await MqttQuic.connect({
+  webTransportUrl: 'https://mqtt.annadata.cloud:443/mqtt-wt',
+  webTransportDeviceId: 'mydevice',
+  webTransportAction: 'subscribe',   // or 'publish', etc.
+  webTransportPath: 'sensors/temp',   // optional; like MQTT topic suffix
+  clientId: 'web-client',
+  host: 'mqtt.annadata.cloud',
+  port: 443,
+});
+// Connects to: https://mqtt.annadata.cloud:443/mqtt-wt/devices/mydevice/subscribe/sensors/temp
+```
 
 ## Compatibility
 
+- **Platforms:** **iOS**, **Android**, **Web (browser / PWA)**
 - **MQTT Protocol:** 3.1.1 and 5.0 (auto-negotiation)
-- **iOS:** 15.0+ (for Network framework)
+- **iOS:** 15.0+
 - **Android:** API 21+ (Android 5.0+)
-- **Web/PWA:** mqtt.js over WSS
+- **Web:** Any modern browser; MQTT over WSS
 - **Capacitor:** 7.0+
-- **QUIC:** ngtcp2 1.21.0+ (when integrated)
+- **QUIC:** ngtcp2 + WolfSSL on native; on web, optional WebTransport (browser's HTTP/3/QUIC) when server supports it
+
+## Author
+
+**Yakub Mohammad**
+
+- yakub@annadata.ai
+- yakub@arusatech.com
+- yakub@arusallc.com
 
 ## License
 

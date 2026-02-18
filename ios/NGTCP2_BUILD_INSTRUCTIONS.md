@@ -322,6 +322,18 @@ brew install cmake
 - Check that header search paths are correct
 - Ensure OpenSSL and ngtcp2 are linked in the correct order
 
+### Enabling wolfSSL debug (ERR_CRYPTO / TLS handshake)
+
+To see why TLS verification fails (e.g. ERR_CRYPTO from ngtcp2/wolfSSL):
+
+1. **Set the env var** before the QUIC connection runs:
+   - In the host app (e.g. Xcode scheme or code): set `MQTT_QUIC_WOLFSSL_DEBUG=1`.
+   - The plugin’s native code (`NGTCP2Bridge.mm`) checks this and calls `wolfSSL_Debugging_ON()` when the SSL context is created.
+
+2. **Rebuild** the plugin (and the app that uses it), then connect. wolfSSL will print debug lines to stderr (Xcode console or device log) describing the handshake and any verification failure.
+
+3. **Note:** Debug output only appears if wolfSSL was built with `DEBUG_WOLFSSL` (or equivalent). If you see no extra output, the wolfSSL library may be a release build; rebuild wolfSSL with debug enabled if you need the logs.
+
 ## Next Steps
 
 After building ngtcp2:

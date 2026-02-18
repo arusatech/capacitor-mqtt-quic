@@ -2,13 +2,15 @@
 
 This guide explains how to publish the plugin to npm for use in mobile apps.
 
+**For a production-grade pack (including native libs under the plugin) and full checklist, use [PRODUCTION_PUBLISH_STEPS.md](./PRODUCTION_PUBLISH_STEPS.md).**
+
 ## Prerequisites
 
 - npm account with access to `@annadata` scope
 - Node.js 18+
 - All native libraries built (see build instructions)
 
-**Note:** The published package includes source code only. Users must build ngtcp2/nghttp3/OpenSSL separately. You can optionally build and include pre-built libraries (see below).
+**Note:** The published package includes source code only. Users must build ngtcp2/nghttp3/WolfSSL separately (or use prebuilt libs you ship). You can optionally build and include pre-built libraries (see below).
 
 ## Publishing Steps
 
@@ -146,7 +148,7 @@ The published package includes:
 - iOS: Swift source + podspec (libraries must be built separately)
 - Android: Kotlin source + CMakeLists.txt (libraries must be built separately)
 
-**Users must build ngtcp2/nghttp3/OpenSSL** per platform before the plugin works. See:
+**Users must build ngtcp2/nghttp3/WolfSSL** (or WolfSSL for Android: wolfssl-android) per platform before the plugin works. See:
 - `ios/NGTCP2_BUILD_INSTRUCTIONS.md`
 - `android/NGTCP2_BUILD_INSTRUCTIONS.md`
 
@@ -192,6 +194,6 @@ Users should replace placeholder CA PEM files:
 
 ### Native library linking errors
 
-- Users must build ngtcp2/nghttp3/OpenSSL first
+- Users must build ngtcp2/nghttp3/WolfSSL first (Android: wolfssl-android)
 - Check `CMakeLists.txt` paths point to correct install directories
 - Verify ABI matches device architecture

@@ -1,6 +1,6 @@
 # Building ngtcp2 for Android
 
-This document provides instructions for building ngtcp2 and OpenSSL for Android to enable real QUIC transport in the MQTT client.
+This document provides instructions for building ngtcp2 and WolfSSL (wolfssl-android) for Android to enable real QUIC transport in the MQTT client. The plugin uses WolfSSL by default; optional QuicTLS/OpenSSL build paths are also documented.
 
 ## Prerequisites
 
@@ -17,29 +17,53 @@ omit `--ndk-path` if your NDK is installed in one of those locations.
 Build scripts then expect dependencies under:
 - `$PROJECT_DIR/ref-code/ngtcp2`
 - `$PROJECT_DIR/ref-code/nghttp3`
-- `$PROJECT_DIR/ref-code/openssl`
+- `$PROJECT_DIR/ref-code/wolfssl` (default) or `$PROJECT_DIR/ref-code/openssl` (optional QuicTLS)
 
 ```bash
-export PROJECT_DIR="/Users/annadata/Project_A/annadata-production/ref-code/capacitor-mqtt-quic"
+export PROJECT_DIR="/path/to/capacitor-mqtt-quic"
 ```
 
-Override with `NGTCP2_SOURCE_DIR`, `NGHTTP3_SOURCE_DIR`, `OPENSSL_SOURCE_DIR`
-if you store sources elsewhere.
+Override with `NGTCP2_SOURCE_DIR`, `NGHTTP3_SOURCE_DIR`, `WOLFSSL_SOURCE_DIR` (or `OPENSSL_SOURCE_DIR` for QuicTLS) if you store sources elsewhere.
 
 ## Quick Start
 
 ### Option 1: Use Pre-built Libraries (Recommended for Development)
 
-If you have access to pre-built ngtcp2, nghttp3, and OpenSSL libraries:
+If you have access to pre-built ngtcp2, nghttp3, and WolfSSL libraries:
 
-1. Place `libngtcp2_client.so` in `android/src/main/jniLibs/<abi>/`
-2. Place `libnghttp3.a` in `android/libs/<abi>/`
-3. Place OpenSSL libraries (`libssl.a`, `libcrypto.a`) in `android/libs/<abi>/`
-4. Update `build.gradle` and `CMakeLists.txt` to link against these libraries
+1. Place ngtcp2/nghttp3 static libs in `android/install/ngtcp2-android/<abi>/` and `android/install/nghttp3-android/<abi>/`
+2. Place WolfSSL (`libwolfssl.a`) in `android/install/wolfssl-android/<abi>/`
+3. Update `CMakeLists.txt` to point at `android/install/` (plugin expects wolfssl-android by default)
 
-### Option 2: Build from Source
+### Option 2: Build from Source (WolfSSL – default)
 
-#### Step 1: Build OpenSSL for Android (QUIC TLS)
+From the **plugin repo root** (not `android/`), run:
+
+```bash
+./build-native.sh --android-only --abi arm64-v8a
+./build-native.sh --android-only --abi armeabi-v7a
+./build-native.sh --android-only --abi x86_64
+```
+
+This builds WolfSSL → nghttp3 → ngtcp2 and installs to:
+- `android/install/wolfssl-android/<abi>/`
+- `android/install/nghttp3-android/<abi>/`
+- `android/install/ngtcp2-android/<abi>/`
+
+**Or** from `android/` use the individual scripts:
+
+```bash
+cd android
+./build-wolfssl.sh --ndk-path ~/Android/Sdk/ndk/25.2.9519653 --platform android-21 --abi arm64-v8a
+./build-nghttp3.sh --ndk-path ~/Android/Sdk/ndk/25.2.9519653 --platform android-21 --abi arm64-v8a
+./build-ngtcp2.sh --abi arm64-v8a --platform android-21
+```
+
+Repeat for `armeabi-v7a` and `x86_64` as needed.
+
+### Option 3: Build from Source (QuicTLS/OpenSSL – optional)
+
+If you need OpenSSL/QuicTLS instead of WolfSSL:
 
 ```bash
 cd android
@@ -52,23 +76,9 @@ cd android
 
 This will:
 - Clone QuicTLS (https://github.com/quictls/quictls) if not present (OpenSSL fork with QUIC API)
-- Build static libraries for Android
 - Install to `android/install/openssl-android/<abi>/`
 
-**Note:** For different ABIs, repeat the build:
-```bash
-# arm64-v8a (64-bit ARM)
-./build-openssl.sh --ndk-path ~/Android/Sdk/ndk/25.2.9519653 --platform android-21 --abi arm64-v8a --quictls
-# ./build-openssl.sh --ndk-path "/Users/annadata/Library/Android/sdk/ndk/29.0.13113456" --abi arm64-v8a --platform android-21 --quictls
-
-# armeabi-v7a (32-bit ARM)
-./build-openssl.sh --ndk-path ~/Android/Sdk/ndk/25.2.9519653 --platform android-21 --abi armeabi-v7a --quictls
-# ./build-openssl.sh --ndk-path "/Users/annadata/Library/Android/sdk/ndk/29.0.13113456" --abi armeabi-v7a --platform android-21 --quictls
-
-# x86_64 (64-bit x86)
-./build-openssl.sh --ndk-path ~/Android/Sdk/ndk/25.2.9519653 --platform android-21 --abi x86_64 --quictls
-# ./build-openssl.sh --ndk-path "/Users/annadata/Library/Android/sdk/ndk/29.0.13113456" --abi x86_64 --platform android-21 --quictls
-```
+**Note:** The plugin’s CMake is configured for **WolfSSL** by default. Use Option 2 for the standard plugin build.
 
 #### Step 2: Build nghttp3 for Android
 
@@ -86,7 +96,7 @@ This will:
 
 - ./build-nghttp3.sh --abi arm64-v8a --platform android-21
 
-#### Step 3: Build ngtcp2 for Android
+#### Step 3: Build ngtcp2 for Android (WolfSSL – default)
 
 ```bash
 cd android
@@ -94,15 +104,16 @@ cd android
   --ndk-path ~/Library/Android/sdk/ndk/<ndk-version> \
   --abi arm64-v8a \
   --platform android-21 \
-  --openssl-path ./install/openssl-android/arm64-v8a \
-  --quictls
+  --wolfssl-path ./install/wolfssl-android/arm64-v8a
 ```
 
 This will:
-- Build ngtcp2 static library
-- Link against OpenSSL
+- Build ngtcp2 static library with WolfSSL crypto
 - Install to `android/install/ngtcp2-android/<abi>/`
-./build-ngtcp2.sh --abi arm64-v8a --platform android-21 --openssl-path ./install/openssl-android --quictls
+
+Example: `./build-ngtcp2.sh --abi arm64-v8a --platform android-21 --wolfssl-path ./install/wolfssl-android/arm64-v8a`
+
+If using QuicTLS/OpenSSL instead: `./build-ngtcp2.sh --abi arm64-v8a --platform android-21 --openssl-path ./install/openssl-android --quictls`
 
 #### Step 4: Build JNI Library
 
@@ -160,13 +171,13 @@ android {
 
 ### Update CMakeLists.txt
 
-Ensure `CMakeLists.txt` points to correct ngtcp2 and OpenSSL paths:
+Ensure `CMakeLists.txt` points to correct ngtcp2 and WolfSSL paths (plugin default):
 
 ```cmake
-# Set paths
-set(NGTCP2_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../ngtcp2")
-set(NGHTTP3_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../nghttp3")
-set(OPENSSL_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../install/openssl-android")
+# Set paths (WolfSSL default)
+set(NGTCP2_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../install/ngtcp2-android/${ANDROID_ABI}")
+set(NGHTTP3_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../install/nghttp3-android/${ANDROID_ABI}")
+set(WOLFSSL_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../install/wolfssl-android/${ANDROID_ABI}")
 ```
 
 ## TLS Certificate Verification (QUIC)
@@ -251,9 +262,13 @@ await MqttQuic.testHarness({
 
 ## Using Pre-built Libraries
 
-### OpenSSL
+### WolfSSL (default)
 
-Download from:
+Build using `./build-wolfssl.sh` or `./build-native.sh --android-only` (see Option 2 above). Pre-built WolfSSL for Android can also be obtained from the wolfSSL project.
+
+### OpenSSL / QuicTLS (optional)
+
+If building with QuicTLS instead of WolfSSL, download from:
 - https://github.com/leenjewel/openssl_for_ios_and_android
 
 ### ngtcp2
@@ -284,7 +299,13 @@ git clone --recurse-submodules https://github.com/ngtcp2/nghttp3.git
 # Or download from: https://cmake.org/download/
 ```
 
-### OpenSSL Build Fails
+### WolfSSL Build Fails
+
+- Ensure WolfSSL is built for the correct ABI (arm64-v8a, armeabi-v7a, x86_64)
+- Check that NDK path is correct
+- Run `./build-wolfssl.sh` from `android/` or `./build-native.sh --android-only` from plugin root
+
+### OpenSSL/QuicTLS Build Fails (optional path)
 
 - Ensure you're using OpenSSL 3.0+ (required for TLS 1.3)
 - Check that NDK path is correct
@@ -292,15 +313,15 @@ git clone --recurse-submodules https://github.com/ngtcp2/nghttp3.git
 
 ### ngtcp2 Build Fails
 
-- Verify OpenSSL is built and path is correct
+- Verify WolfSSL (or OpenSSL) is built and path is correct (`--wolfssl-path` or `--openssl-path`)
 - Check CMake version: `cmake --version` (must be 3.20+)
 - Ensure Android platform matches (android-21+)
 
 ### Link Errors
 
 - Verify all libraries are built for the same ABI
-- Check that CMakeLists.txt paths are correct
-- Ensure OpenSSL and ngtcp2 are linked in the correct order
+- Check that CMakeLists.txt paths are correct (wolfssl-android for default)
+- Ensure WolfSSL/ngtcp2 and nghttp3 are linked in the correct order
 
 ### JNI Errors
 
