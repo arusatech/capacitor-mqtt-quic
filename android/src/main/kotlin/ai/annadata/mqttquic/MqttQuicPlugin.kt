@@ -100,7 +100,7 @@ class MqttQuicPlugin : Plugin() {
                         notifyListeners("message", data)
                     }
                 }
-                client.connect(host, port, clientId, username, password, cleanSession, keepalive, sessionExpiryInterval)
+                client.connect(host, port, clientId, username, password, cleanSession ?: true, keepalive ?: 20, sessionExpiryInterval)
                 call.resolve(JSObject().put("connected", true))
                 notifyListeners("connected", JSObject().put("connected", true))
             } catch (e: Exception) {
@@ -199,7 +199,7 @@ class MqttQuicPlugin : Plugin() {
                 val properties = mutableMapOf<Int, Any>()
                 messageExpiryInterval?.let { properties[MQTT5PropertyType.MESSAGE_EXPIRY_INTERVAL.toInt()] = it }
                 contentType?.let { properties[MQTT5PropertyType.CONTENT_TYPE.toInt()] = it }
-                client.publish(topic, data, minOf(qos, 2), if (properties.isNotEmpty()) properties else null)
+                client.publish(topic, data, minOf(qos ?: 0, 2), if (properties.isNotEmpty()) properties else null)
                 call.resolve(JSObject().put("success", true))
             } catch (e: Exception) {
                 val msg = e.message ?: "Publish failed"
@@ -226,7 +226,7 @@ class MqttQuicPlugin : Plugin() {
 
         scope.launch {
             try {
-                client.subscribe(topic, minOf(qos, 2), subscriptionIdentifier)
+                client.subscribe(topic, minOf(qos ?: 0, 2), subscriptionIdentifier)
                 call.resolve(JSObject().put("success", true))
             } catch (e: Exception) {
                 call.reject(e.message ?: "Subscribe failed")

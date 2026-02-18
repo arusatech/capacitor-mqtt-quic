@@ -188,7 +188,7 @@ class QuicClient {
     if (!conn_) {
       return 0;
     }
-    int rv = ngtcp2_conn_shutdown_stream_write(conn_, stream_id, 0);
+    int rv = ngtcp2_conn_shutdown_stream_write(conn_, 0, stream_id, 0);
     if (rv != 0) {
       setError(ngtcp2_strerror(rv));
       return -1;
@@ -266,12 +266,12 @@ class QuicClient {
       if (fd == -1) {
         continue;
       }
-      if (connect(fd, rp->ai_addr, rp->ai_addrlen) == 0) {
+      if (::connect(fd, rp->ai_addr, rp->ai_addrlen) == 0) {
         memcpy(&remote_addr_, rp->ai_addr, rp->ai_addrlen);
         remote_addrlen_ = (socklen_t)rp->ai_addrlen;
         break;
       }
-      close(fd);
+      ::close(fd);
       fd = -1;
     }
     freeaddrinfo(res);
@@ -284,7 +284,7 @@ class QuicClient {
     if (getsockname(fd, (struct sockaddr *)&local_addr_, &local_addrlen_) !=
         0) {
       setError("getsockname failed");
-      close(fd);
+      ::close(fd);
       return -1;
     }
 
@@ -333,17 +333,21 @@ class QuicClient {
     bool ca_loaded = false;
     const char *ca_file = std::getenv("MQTT_QUIC_CA_FILE");
     const char *ca_path = std::getenv("MQTT_QUIC_CA_PATH");
-    if ((ca_file && ca_file[0] != '\0') || (ca_path && ca_path[0] != '\0')) {
-      if (wolfSSL_CTX_load_verify_locations(ssl_ctx_, ca_file, ca_path) != 1) {
+    const char *file_arg = (ca_file && ca_file[0] != '\0') ? ca_file : nullptr;
+    const char *path_arg = (ca_path && ca_path[0] != '\0') ? ca_path : nullptr;
+    if (file_arg || path_arg) {
+      if (wolfSSL_CTX_load_verify_locations(ssl_ctx_, file_arg, path_arg) == 1) {
+        ca_loaded = true;
+      } else {
         setError("Failed to load CA bundle from MQTT_QUIC_CA_FILE/CA_PATH");
         return -1;
       }
+    }
+    if (!ca_loaded && wolfSSL_CTX_set_default_verify_paths(ssl_ctx_) == 1) {
       ca_loaded = true;
     }
-    if (!ca_loaded) {
-      if (wolfSSL_CTX_set_default_verify_paths(ssl_ctx_) == 1) {
-        ca_loaded = true;
-      }
+    if (!ca_loaded && wolfSSL_CTX_load_system_CA_certs(ssl_ctx_) == 1) {
+      ca_loaded = true;
     }
     if (!ca_loaded) {
       setError("No CA bundle available for TLS verification");
@@ -660,15 +664,15 @@ class QuicClient {
       ssl_ctx_ = nullptr;
     }
     if (fd_ != -1) {
-      close(fd_);
+      ::close(fd_);
       fd_ = -1;
     }
     if (wakeup_fds_[0] != -1) {
-      close(wakeup_fds_[0]);
+      ::close(wakeup_fds_[0]);
       wakeup_fds_[0] = -1;
     }
     if (wakeup_fds_[1] != -1) {
-      close(wakeup_fds_[1]);
+      ::close(wakeup_fds_[1]);
       wakeup_fds_[1] = -1;
     }
   }
@@ -740,10 +744,11 @@ class QuicClient {
     return 0;
   }
 
-  static int stream_close_cb(ngtcp2_conn *conn, int64_t stream_id,
-                             uint64_t app_error_code, void *user_data,
-                             void *stream_user_data) {
+  static int stream_close_cb(ngtcp2_conn *conn, uint32_t flags,
+                             int64_t stream_id, uint64_t app_error_code,
+                             void *user_data, void *stream_user_data) {
     (void)conn;
+    (void)flags;
     (void)app_error_code;
     (void)stream_user_data;
     auto *client = static_cast<QuicClient *>(user_data);
@@ -924,6 +929,13 @@ Java_ai_annadata_mqttquic_quic_NGTCP2Client_nativeGetLastError(
     return env->NewStringUTF("invalid connection");
   }
   return env->NewStringUTF(it->second->last_error());
+}
+
+// Debug-build alias: Kotlin/AGP can mangle the method name to include the module suffix.
+JNIEXPORT jstring JNICALL
+Java_ai_annadata_mqttquic_quic_NGTCP2Client_nativeGetLastError_00024annadata_1capacitor_1mqtt_1quic_1debug__J(
+    JNIEnv *env, jobject thiz, jlong connHandle) {
+  return Java_ai_annadata_mqttquic_quic_NGTCP2Client_nativeGetLastError(env, thiz, connHandle);
 }
 
 } // extern "C"

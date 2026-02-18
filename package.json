@@ -21,6 +21,7 @@
     "build": "npm run build:tsc && npm run build:rollup",
     "build:tsc": "npx tsc",
     "build:rollup": "npx rollup -c rollup.config.js",
+    "build:android-prebuilts": "./build-native.sh --android-only --abi arm64-v8a && ./build-native.sh --android-only --abi armeabi-v7a && ./build-native.sh --android-only --abi x86_64",
     "watch": "rollup -c rollup.config.js -w",
     "lint": "eslint src --ext ts",
     "prepack": "npm run clean:build-artifacts",

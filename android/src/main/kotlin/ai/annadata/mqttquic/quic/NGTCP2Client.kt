@@ -47,6 +47,7 @@ class NGTCP2Client : QuicClient {
     private external fun nativeClose(connHandle: Long)
     private external fun nativeIsConnected(connHandle: Long): Boolean
     internal external fun nativeCloseStream(connHandle: Long, streamId: Long): Int
+    @JvmName("nativeGetLastError")
     internal external fun nativeGetLastError(connHandle: Long): String
     
     // Connection state

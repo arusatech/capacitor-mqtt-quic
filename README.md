@@ -365,14 +365,17 @@ For detailed manual build instructions, see:
 
 ## Production / First-time build
 
-When you install the plugin from npm (`npm install @annadata/capacitor-mqtt-quic`), the published package may include **prebuilt native libs** (iOS and optionally Android, both using **WolfSSL**). In that case you only need:
+When you install the plugin from npm (`npm install @annadata/capacitor-mqtt-quic`), the published package **may** include **prebuilt native libs** (iOS and optionally Android, both using **WolfSSL**). If it does (a "complete" / zero-config package), you only need:
 
 ```bash
 npm install @annadata/capacitor-mqtt-quic
 npx cap sync
+ionic cap run android   # or ios
 ```
 
-**If your Android build fails with "WolfSSL not found"**, run this **one-time** setup from your app project root (requires Android NDK r25+). Both iOS and Android use **WolfSSL** as the TLS backend (license/size/QUIC support):
+**If your Android build fails with "WolfSSL not found"**, the package you installed does not include prebuilt Android libs. Do **one** of the following.
+
+**Option A – One-time build (from your app project root, requires Android NDK r25+):** Both iOS and Android use **WolfSSL** as the TLS backend (license/size/QUIC support):
 
 ```bash
 cd node_modules/@annadata/capacitor-mqtt-quic
@@ -402,7 +405,31 @@ Or add to your app’s `package.json` and run once:
 "setup:wolfssl-android": "cd node_modules/@annadata/capacitor-mqtt-quic && ./build-native.sh --android-only --abi arm64-v8a && ./build-native.sh --android-only --abi armeabi-v7a && ./build-native.sh --android-only --abi x86_64"
 ```
 
-**iOS:** The plugin ships with vendored static libs (`ios/libs/`) using WolfSSL. If you built the plugin from source and those are missing, run from the plugin repo: `./build-native.sh --ios-only`, then pack/publish.
+**Option B – Use a complete package:** Reinstall a version of the plugin that was published with Android prebuilts (see *Publishing a complete package* below). Then no one-time build is needed.
+
+**iOS:** The plugin typically ships with vendored static libs (`ios/libs/`) using WolfSSL. If you built the plugin from source and those are missing, run from the plugin repo: `./build-native.sh --ios-only`, then pack/publish.
+
+### Publishing a complete (zero-config) package
+
+So that **clients have no native build step**, build Android (and iOS) prebuilts **before** publishing, then publish. The tarball will include `android/install/` and consumers can `npm install` and run the app without running `build-native.sh`.
+
+From the **plugin repo** (capacitor-mqtt-quic), before `npm publish`:
+
+```bash
+# 1) Android prebuilts for all ABIs (required for zero-config Android)
+npm run build:android-prebuilts
+
+# 2) iOS prebuilts (if not already present)
+./build-native.sh --ios-only
+
+# 3) Build JS and publish (clean does not remove android/install or ios/libs)
+npm run build
+npm run clean:build-artifacts
+npm version patch   # or minor
+npm publish --access public
+```
+
+See **docs/PRODUCTION_PUBLISH_STEPS.md** for the full checklist.
 
 ## Development
 

@@ -372,9 +372,9 @@ class MQTTClient {
     /** Send PINGREQ at effectiveKeepalive interval so server sees activity and does not close (idle/keepalive). [MQTT-3.1.2-20] */
     private fun startKeepaliveLoop() {
         keepaliveJob?.cancel()
-        val ka = lock.withLock { effectiveKeepalive }
-        if (ka <= 0) return
         keepaliveJob = scope.launch {
+            val ka = lock.withLock { effectiveKeepalive }
+            if (ka <= 0) return@launch
             while (isActive) {
                 delay(ka * 1000L) // seconds to ms
                 val (w, stillConnected) = lock.withLock {
@@ -428,8 +428,7 @@ class MQTTClient {
                                 if (activeProtocolVersion == MQTTProtocolLevel.V5) {
                                     MQTT5Protocol.parsePublishV5(rest, 0, qos, topicAliasMap)
                                 } else {
-                                    val t = MQTTProtocol.parsePublish(rest, 0, qos)
-                                    Triple(t.first, t.second, t.third)
+                                    MQTTProtocol.parsePublish(rest, 0, qos)
                                 }
                             }
 

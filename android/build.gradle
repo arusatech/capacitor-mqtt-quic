@@ -36,7 +36,10 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
             cmake {
-                arguments "-DANDROID_STL=c++_shared"
+                arguments "-DANDROID_STL=c++_shared",
+                    "-DWOLFSSL_ROOT_DIR=${file('install/wolfssl-android').absolutePath}",
+                    "-DNGTCP2_INSTALL_DIR=${file('install/ngtcp2-android').absolutePath}",
+                    "-DNGHTTP3_INSTALL_DIR=${file('install/nghttp3-android').absolutePath}"
                 cppFlags "-std=c++17"
             }
         }

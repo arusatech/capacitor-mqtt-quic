@@ -14,9 +14,10 @@ endif()
 # WolfSSL path (same layout as iOS: TLS backend for ngtcp2). Override via -DWOLFSSL_ROOT_DIR=...
 if(NOT WOLFSSL_ROOT_DIR)
     set(WOLFSSL_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../install/wolfssl-android" CACHE PATH "Path to WolfSSL for Android")
-    if(EXISTS "${WOLFSSL_ROOT_DIR}/${ANDROID_ABI}")
-        set(WOLFSSL_ROOT_DIR "${WOLFSSL_ROOT_DIR}/${ANDROID_ABI}" CACHE PATH "Path to WolfSSL for Android (ABI)" FORCE)
-    endif()
+endif()
+# Prefer ABI-specific subdir when present (e.g. when WOLFSSL_ROOT_DIR is passed as base path from Gradle)
+if(EXISTS "${WOLFSSL_ROOT_DIR}/${ANDROID_ABI}")
+    set(WOLFSSL_ROOT_DIR "${WOLFSSL_ROOT_DIR}/${ANDROID_ABI}" CACHE PATH "Path to WolfSSL for Android (ABI)" FORCE)
 endif()
 if(NOT WOLFSSL_INCLUDE_DIR AND EXISTS "${WOLFSSL_ROOT_DIR}/include")
     set(WOLFSSL_INCLUDE_DIR "${WOLFSSL_ROOT_DIR}/include")
@@ -25,7 +26,12 @@ if(NOT WOLFSSL_LIBRARY AND EXISTS "${WOLFSSL_ROOT_DIR}/lib/libwolfssl.a")
     set(WOLFSSL_LIBRARY "${WOLFSSL_ROOT_DIR}/lib/libwolfssl.a")
 endif()
 if(NOT WOLFSSL_LIBRARY OR NOT WOLFSSL_INCLUDE_DIR)
-    message(FATAL_ERROR "WolfSSL not found. Build it first: cd android && ./build-wolfssl.sh --abi ${ANDROID_ABI}. Then run ./build-ngtcp2.sh (default uses WolfSSL).")
+    message(FATAL_ERROR
+        "WolfSSL not found at ${WOLFSSL_ROOT_DIR}. "
+        "One-time fix (from your app project root): "
+        "cd node_modules/@annadata/capacitor-mqtt-quic && "
+        "./build-native.sh --android-only --abi ${ANDROID_ABI} "
+        "(repeat for armeabi-v7a, x86_64). See plugin README 'Production / First-time build'.")
 endif()
 
 # ngtcp2 install/source directories (adjust as needed)
@@ -45,6 +51,14 @@ if(NOT NGHTTP3_INSTALL_DIR)
     endif()
 endif()
 set(NGHTTP3_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../nghttp3" CACHE PATH "Path to nghttp3 source")
+
+# Prefer ABI-specific subdir when install dirs are passed as base path from Gradle
+if(EXISTS "${NGTCP2_INSTALL_DIR}/${ANDROID_ABI}")
+    set(NGTCP2_INSTALL_DIR "${NGTCP2_INSTALL_DIR}/${ANDROID_ABI}" CACHE PATH "Path to ngtcp2 install (ABI)" FORCE)
+endif()
+if(EXISTS "${NGHTTP3_INSTALL_DIR}/${ANDROID_ABI}")
+    set(NGHTTP3_INSTALL_DIR "${NGHTTP3_INSTALL_DIR}/${ANDROID_ABI}" CACHE PATH "Path to nghttp3 install (ABI)" FORCE)
+endif()
 
 # Prefer installed libraries (WolfSSL backend: libngtcp2_crypto_wolfssl.a), fallback to source build
 set(NGTCP2_INCLUDE_DIR "")
@@ -112,7 +126,7 @@ target_include_directories(ngtcp2_client PRIVATE
 )
 
 # Link libraries: WolfSSL + ngtcp2 (same TLS backend as iOS)
-target_link_libraries(ngtcp2_client
+target_link_libraries(ngtcp2_client PRIVATE
     ${WOLFSSL_LIBRARY}
     log
 )

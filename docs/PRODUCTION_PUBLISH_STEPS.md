@@ -32,9 +32,15 @@ This produces:
 
 The podspec’s `vendored_libraries` point at `ios/libs/`; these **must** be present when you pack/publish.
 
-### Android (optional but recommended for zero-config)
+### Android (required for zero-config / “complete” package)
 
-Android uses **WolfSSL** (same TLS backend as iOS). Build WolfSSL + nghttp3 + ngtcp2 for all ABIs so consumers don’t need to run the one-time setup:
+Android uses **WolfSSL** (same TLS backend as iOS). To ship a **complete** plugin so clients don’t run any native build, build WolfSSL + nghttp3 + ngtcp2 for all ABIs:
+
+```bash
+npm run build:android-prebuilts
+```
+
+Or manually:
 
 ```bash
 ./build-native.sh --android-only --abi arm64-v8a

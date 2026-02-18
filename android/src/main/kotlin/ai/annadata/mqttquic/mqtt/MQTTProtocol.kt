@@ -201,9 +201,9 @@ object MQTTProtocol {
     
     /**
      * Parse PUBLISH payload (after fixed header).
-     * Returns (topic, packetId?, payload, newOffset). packetId only for QoS > 0.
+     * Returns (topic, packetId?, payload). packetId only for QoS > 0.
      */
-    fun parsePublish(data: ByteArray, offset: Int, qos: Int): Triple<String, Int?, ByteArray, Int> {
+    fun parsePublish(data: ByteArray, offset: Int, qos: Int): Triple<String, Int?, ByteArray> {
         var off = offset
         val (topic, next) = decodeString(data, off)
         off = next
@@ -214,7 +214,7 @@ object MQTTProtocol {
             off += 2
         }
         val payload = data.copyOfRange(off, data.size)
-        return Triple(topic, pid, payload, data.size)
+        return Triple(topic, pid, payload)
     }
 
     fun buildSubscribe(packetId: Int, topic: String, qos: Int = 0): ByteArray {

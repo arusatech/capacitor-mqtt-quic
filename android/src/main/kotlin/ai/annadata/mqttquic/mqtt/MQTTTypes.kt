@@ -5,21 +5,21 @@ package ai.annadata.mqttquic.mqtt
  */
 
 object MQTTMessageType {
-    const val CONNECT: Byte = 0x10
-    const val CONNACK: Byte = 0x20
-    const val PUBLISH: Byte = 0x30
-    const val PUBACK: Byte = 0x40
-    const val PUBREC: Byte = 0x50
-    const val PUBREL: Byte = 0x62
-    const val PUBCOMP: Byte = 0x70
-    const val SUBSCRIBE: Byte = 0x82
-    const val SUBACK: Byte = 0x90
-    const val UNSUBSCRIBE: Byte = 0xA2
-    const val UNSUBACK: Byte = 0xB0
-    const val PINGREQ: Byte = 0xC0
-    const val PINGRESP: Byte = 0xD0
-    const val DISCONNECT: Byte = 0xE0
-    const val AUTH: Byte = 0xF0
+    const val CONNECT: Byte = 0x10.toByte()
+    const val CONNACK: Byte = 0x20.toByte()
+    const val PUBLISH: Byte = 0x30.toByte()
+    const val PUBACK: Byte = 0x40.toByte()
+    const val PUBREC: Byte = 0x50.toByte()
+    const val PUBREL: Byte = 0x62.toByte()
+    const val PUBCOMP: Byte = 0x70.toByte()
+    const val SUBSCRIBE: Byte = 0x82.toByte()
+    const val SUBACK: Byte = 0x90.toByte()
+    const val UNSUBSCRIBE: Byte = 0xA2.toByte()
+    const val UNSUBACK: Byte = 0xB0.toByte()
+    const val PINGREQ: Byte = 0xC0.toByte()
+    const val PINGRESP: Byte = 0xD0.toByte()
+    const val DISCONNECT: Byte = 0xE0.toByte()
+    const val AUTH: Byte = 0xF0.toByte()
 }
 
 object MQTTConnectFlags {
