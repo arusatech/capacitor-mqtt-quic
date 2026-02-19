@@ -15,7 +15,7 @@ interface QuicStream {
  * QUIC client: connect, TLS handshake, open one bidirectional stream.
  */
 interface QuicClient {
-    suspend fun connect(host: String, port: Int)
+    suspend fun connect(host: String, port: Int, connectAddress: String? = null)
     suspend fun openStream(): QuicStream
     suspend fun close()
 }

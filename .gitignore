@@ -24,6 +24,7 @@ reference/**
 *.framework
 *.xcframework
 .npmrc
+*.patch
 
 # iOS specific
 ios/install/

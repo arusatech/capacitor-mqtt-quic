@@ -40,10 +40,10 @@ object MQTTProtocol {
             val b = data[i].toInt() and 0xFF
             len += (b and 0x7F) * mul
             i++
-            if ((b and 0x80) == 0) return@repeat
+            if ((b and 0x80) == 0) return len to (i - offset)
             mul *= 128
         }
-        return len to (i - offset)
+        throw IllegalArgumentException("Invalid remaining length (max 4 bytes)")
     }
 
     fun encodeString(s: String): ByteArray {
@@ -73,6 +73,37 @@ object MQTTProtocol {
         val msgType = data[0]
         val (rem, consumed) = decodeRemainingLength(data, 1)
         return Triple(msgType, rem, 1 + consumed)
+    }
+
+    /**
+     * Returns total MQTT packet length (fixed header + payload) if buffer has at least a decodable fixed header, else null.
+     * Use when draining stream: accumulate bytes, then call this; when buffer.size >= length, you have a complete packet.
+     */
+    fun getNextPacketLength(buffer: ByteArray): Int? {
+        if (buffer.size < 2) return null
+        // CONNACK (0x20): often single-byte remaining length (e.g. 0x20 = 32 → total 34). Handle that first.
+        if (buffer[0].toInt() and 0xFF == 0x20) {
+            val b1 = buffer[1].toInt() and 0xFF
+            if ((b1 and 0x80) == 0) {
+                val rem = b1
+                val total = 1 + 1 + rem
+                if (total <= buffer.size) return total
+            } else {
+                try {
+                    val (rem, consumed) = decodeRemainingLength(buffer, 1)
+                    val total = 1 + consumed + rem
+                    if (total <= buffer.size) return total
+                } catch (_: IllegalArgumentException) { /* fall through */ }
+            }
+        }
+        for (len in minOf(5, buffer.size) downTo 2) {
+            try {
+                val (_, rem, fixedLen) = parseFixedHeader(buffer.copyOf(len))
+                val total = fixedLen + rem
+                if (total in 1..buffer.size) return total
+            } catch (_: IllegalArgumentException) { /* need more bytes for remaining length */ }
+        }
+        return null
     }
 
     fun buildConnect(

@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cinttypes>
 #include <cstdarg>
 #include <cstdlib>
 #include <cstdio>
@@ -73,7 +74,11 @@ struct OutgoingChunk {
 class QuicClient {
  public:
   QuicClient(std::string host, uint16_t port)
-      : host_(std::move(host)),
+      : QuicClient(std::move(host), "", port) {}
+
+  QuicClient(std::string host_for_tls, std::string connect_addr, uint16_t port)
+      : host_(std::move(host_for_tls)),
+        connect_addr_(connect_addr.empty() ? host_ : std::move(connect_addr)),
         port_(port),
         fd_(-1),
         ssl_ctx_(nullptr),
@@ -181,6 +186,9 @@ class QuicClient {
       buffer[i] = state.recv_buf.front();
       state.recv_buf.pop_front();
     }
+    if (n > 0) {
+      LOGI("read_stream stream_id=%" PRId64 " returning %zu bytes", (int64_t)stream_id, n);
+    }
     return (ssize_t)n;
   }
 
@@ -223,6 +231,8 @@ class QuicClient {
     std::lock_guard<std::mutex> lock(stream_mutex_);
     StreamState &state = streams_[stream_id];
     state.recv_buf.insert(state.recv_buf.end(), data, data + datalen);
+    LOGI("recv stream data stream_id=%" PRId64 " len=%zu recv_buf_total=%zu",
+         (int64_t)stream_id, datalen, state.recv_buf.size());
     if (flags & NGTCP2_STREAM_DATA_FLAG_FIN) {
       state.fin_received = true;
     }
@@ -254,7 +264,8 @@ class QuicClient {
 
     char port_str[16];
     snprintf(port_str, sizeof(port_str), "%u", port_);
-    int rv = getaddrinfo(host_.c_str(), port_str, &hints, &res);
+    const char *resolve_host = connect_addr_.empty() ? host_.c_str() : connect_addr_.c_str();
+    int rv = getaddrinfo(resolve_host, port_str, &hints, &res);
     if (rv != 0) {
       setError(gai_strerror(rv));
       return -1;
@@ -269,6 +280,13 @@ class QuicClient {
       if (::connect(fd, rp->ai_addr, rp->ai_addrlen) == 0) {
         memcpy(&remote_addr_, rp->ai_addr, rp->ai_addrlen);
         remote_addrlen_ = (socklen_t)rp->ai_addrlen;
+        char buf[INET6_ADDRSTRLEN];
+        const void *src = (rp->ai_family == AF_INET)
+            ? (void *)&((struct sockaddr_in *)rp->ai_addr)->sin_addr
+            : (void *)&((struct sockaddr_in6 *)rp->ai_addr)->sin6_addr;
+        if (inet_ntop(rp->ai_family, src, buf, sizeof(buf))) {
+          resolved_address_ = buf;
+        }
         break;
       }
       ::close(fd);
@@ -651,29 +669,43 @@ class QuicClient {
   }
 
   void cleanup() {
-    if (conn_) {
-      ngtcp2_conn_del(conn_);
+    ngtcp2_conn *conn_to_del = nullptr;
+    void *ssl_to_free = nullptr;
+    void *ssl_ctx_to_free = nullptr;
+    int fd_to_close = -1;
+    int wake0 = -1, wake1 = -1;
+    {
+      std::lock_guard<std::mutex> lock(cleanup_mutex_);
+      conn_to_del = conn_;
       conn_ = nullptr;
-    }
-    if (ssl_) {
-      wolfSSL_free(ssl_);
+      ssl_to_free = ssl_;
       ssl_ = nullptr;
-    }
-    if (ssl_ctx_) {
-      wolfSSL_CTX_free(ssl_ctx_);
+      ssl_ctx_to_free = ssl_ctx_;
       ssl_ctx_ = nullptr;
-    }
-    if (fd_ != -1) {
-      ::close(fd_);
+      fd_to_close = fd_;
       fd_ = -1;
-    }
-    if (wakeup_fds_[0] != -1) {
-      ::close(wakeup_fds_[0]);
+      wake0 = wakeup_fds_[0];
+      wake1 = wakeup_fds_[1];
       wakeup_fds_[0] = -1;
-    }
-    if (wakeup_fds_[1] != -1) {
-      ::close(wakeup_fds_[1]);
       wakeup_fds_[1] = -1;
+    }
+    if (conn_to_del) {
+      ngtcp2_conn_del(conn_to_del);
+    }
+    if (ssl_to_free) {
+      wolfSSL_free(static_cast<WOLFSSL *>(ssl_to_free));
+    }
+    if (ssl_ctx_to_free) {
+      wolfSSL_CTX_free(static_cast<WOLFSSL_CTX *>(ssl_ctx_to_free));
+    }
+    if (fd_to_close != -1) {
+      ::close(fd_to_close);
+    }
+    if (wake0 != -1) {
+      ::close(wake0);
+    }
+    if (wake1 != -1) {
+      ::close(wake1);
     }
   }
 
@@ -766,9 +798,14 @@ class QuicClient {
     return client->on_handshake_completed();
   }
 
+ public:
+  const std::string &resolved_address() const { return resolved_address_; }
+
  private:
   std::string host_;
+  std::string connect_addr_;
   uint16_t port_;
+  std::string resolved_address_;
 
   int fd_;
   struct sockaddr_storage remote_addr_;
@@ -800,6 +837,8 @@ class QuicClient {
 
   mutable std::mutex err_mutex_;
   std::string last_error_str_;
+
+  std::mutex cleanup_mutex_;
 };
 
 static std::map<jlong, std::unique_ptr<QuicClient>> connections;
@@ -821,6 +860,27 @@ Java_ai_annadata_mqttquic_quic_NGTCP2Client_nativeCreateConnection(
   env->ReleaseStringUTFChars(host, host_str);
 
   auto client = std::make_unique<QuicClient>(host_cpp, (uint16_t)port);
+  std::lock_guard<std::mutex> lock(connections_mutex);
+  jlong handle = next_handle++;
+  connections[handle] = std::move(client);
+  return handle;
+}
+
+JNIEXPORT jlong JNICALL
+Java_ai_annadata_mqttquic_quic_NGTCP2Client_nativeCreateConnectionWithAddress(
+    JNIEnv *env, jobject thiz, jstring hostnameForTls, jstring connectAddress, jint port) {
+  const char *tls_str = env->GetStringUTFChars(hostnameForTls, nullptr);
+  const char *addr_str = env->GetStringUTFChars(connectAddress, nullptr);
+  if (!tls_str || !addr_str) {
+    if (tls_str) env->ReleaseStringUTFChars(hostnameForTls, tls_str);
+    return 0;
+  }
+  std::string host_for_tls(tls_str);
+  std::string connect_addr(addr_str);
+  env->ReleaseStringUTFChars(hostnameForTls, tls_str);
+  env->ReleaseStringUTFChars(connectAddress, addr_str);
+
+  auto client = std::make_unique<QuicClient>(host_for_tls, connect_addr, (uint16_t)port);
   std::lock_guard<std::mutex> lock(connections_mutex);
   jlong handle = next_handle++;
   connections[handle] = std::move(client);
@@ -929,6 +989,21 @@ Java_ai_annadata_mqttquic_quic_NGTCP2Client_nativeGetLastError(
     return env->NewStringUTF("invalid connection");
   }
   return env->NewStringUTF(it->second->last_error());
+}
+
+JNIEXPORT jstring JNICALL
+Java_ai_annadata_mqttquic_quic_NGTCP2Client_nativeGetLastResolvedAddress(
+    JNIEnv *env, jobject thiz, jlong connHandle) {
+  std::lock_guard<std::mutex> lock(connections_mutex);
+  auto it = connections.find(connHandle);
+  if (it == connections.end()) {
+    return nullptr;
+  }
+  const std::string &addr = it->second->resolved_address();
+  if (addr.empty()) {
+    return nullptr;
+  }
+  return env->NewStringUTF(addr.c_str());
 }
 
 // Debug-build alias: Kotlin/AGP can mangle the method name to include the module suffix.

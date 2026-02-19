@@ -13,10 +13,13 @@ import android.system.Os
 import android.util.Base64
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.nio.charset.StandardCharsets
 import java.io.File
 import java.io.IOException
+import java.net.InetAddress
 
 /**
  * Capacitor plugin bridge. Phase 3: connect/publish/subscribe call into MQTTClient.
@@ -26,6 +29,29 @@ class MqttQuicPlugin : Plugin() {
 
     private var client = MQTTClient(MQTTClient.ProtocolVersion.AUTO)
     private val scope = CoroutineScope(Dispatchers.Main)
+
+    /** Last resolved IP per host (used when DNS fails on reconnect). */
+    @Volatile
+    private var lastResolvedHost: String? = null
+    @Volatile
+    private var lastResolvedIp: String? = null
+
+    /** Resolve hostname to IP for socket connect (avoids "No address" on reconnect). Returns null if resolution fails. */
+    private fun resolveHostToIp(host: String): String? {
+        return try {
+            InetAddress.getAllByName(host).firstOrNull()?.hostAddress?.also { ip ->
+                lastResolvedHost = host
+                lastResolvedIp = ip
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /** Use cached IP for this host if fresh resolve failed (e.g. on reconnect). */
+    private fun resolveOrCachedIp(host: String): String? {
+        return resolveHostToIp(host) ?: if (host == lastResolvedHost) lastResolvedIp else null
+    }
 
     private fun bundledCaFilePath(): String? {
         return try {
@@ -100,9 +126,38 @@ class MqttQuicPlugin : Plugin() {
                         notifyListeners("message", data)
                     }
                 }
-                client.connect(host, port, clientId, username, password, cleanSession ?: true, keepalive ?: 20, sessionExpiryInterval)
-                call.resolve(JSObject().put("connected", true))
-                notifyListeners("connected", JSObject().put("connected", true))
+                // Resolve host to IP on IO so native getaddrinfo gets an IP (avoids "No address associated with hostname" on reconnect)
+                val noAddressMsg = "No address associated with hostname"
+                var lastException: Exception? = null
+                for (attempt in 1..2) {
+                    try {
+                        withContext(Dispatchers.IO) {
+                            val resolvedIp = resolveOrCachedIp(host)
+                            client.connect(host, port, clientId, username, password, cleanSession ?: true, keepalive ?: 20, sessionExpiryInterval, connectAddress = resolvedIp)
+                        }
+                        // Cache resolved IP from native so reconnect can use it when Java DNS fails
+                        client.getLastResolvedAddress()?.let { ip ->
+                            lastResolvedHost = host
+                            lastResolvedIp = ip
+                        }
+                        call.resolve(JSObject().put("connected", true))
+                        notifyListeners("connected", JSObject().put("connected", true))
+                        return@launch
+                    } catch (e: Exception) {
+                        // Cache resolved IP from native even on failure (e.g. CONNACK timeout) so reconnect can use it
+                        client.getLastResolvedAddress()?.let { ip ->
+                            lastResolvedHost = host
+                            lastResolvedIp = ip
+                        }
+                        lastException = e
+                        if (attempt == 1 && e.message?.contains(noAddressMsg, ignoreCase = true) == true) {
+                            delay(2000L)
+                            continue
+                        }
+                        break
+                    }
+                }
+                call.reject(lastException?.message ?: "Connection failed")
             } catch (e: Exception) {
                 call.reject(e.message ?: "Connection failed")
             }

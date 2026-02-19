@@ -40,22 +40,28 @@ class NGTCP2Client : QuicClient {
     
     // Native methods (implemented in ngtcp2_jni.cpp)
     private external fun nativeCreateConnection(host: String, port: Int): Long
+    private external fun nativeCreateConnectionWithAddress(hostnameForTls: String, connectAddress: String, port: Int): Long
     private external fun nativeConnect(connHandle: Long): Int
     private external fun nativeOpenStream(connHandle: Long): Long
     private external fun nativeWriteStream(connHandle: Long, streamId: Long, data: ByteArray): Int
     private external fun nativeReadStream(connHandle: Long, streamId: Long): ByteArray?
     private external fun nativeClose(connHandle: Long)
     private external fun nativeIsConnected(connHandle: Long): Boolean
-    internal external fun nativeCloseStream(connHandle: Long, streamId: Long): Int
+    // Public to avoid Kotlin internal-name mangling (nativeCloseStream$module) which breaks JNI lookup
+    external fun nativeCloseStream(connHandle: Long, streamId: Long): Int
     @JvmName("nativeGetLastError")
-    internal external fun nativeGetLastError(connHandle: Long): String
-    
+    external fun nativeGetLastError(connHandle: Long): String
+    private external fun nativeGetLastResolvedAddress(connHandle: Long): String?
+
+    /** Resolved IP used for this connection (set after init_socket in native). Use for reconnect cache when Java DNS fails. */
+    fun getLastResolvedAddress(): String? = if (connHandle != 0L) nativeGetLastResolvedAddress(connHandle) else null
+
     // Connection state
     private var connHandle: Long = 0
     private var isConnected: Boolean = false
     private val streams = mutableMapOf<Long, NGTCP2Stream>()
     
-    override suspend fun connect(host: String, port: Int) {
+    override suspend fun connect(host: String, port: Int, connectAddress: String?) {
         if (!isAvailable()) {
             throw IllegalStateException("ngtcp2 native library is not loaded")
         }
@@ -63,8 +69,12 @@ class NGTCP2Client : QuicClient {
             throw IllegalStateException("Already connected")
         }
         
-        // Create native connection
-        connHandle = nativeCreateConnection(host, port)
+        // Create native connection (use pre-resolved IP when given to avoid "No address" on reconnect)
+        connHandle = if (!connectAddress.isNullOrBlank()) {
+            nativeCreateConnectionWithAddress(host, connectAddress, port)
+        } else {
+            nativeCreateConnection(host, port)
+        }
         if (connHandle == 0L) {
             throw IllegalStateException("Failed to create QUIC connection")
         }
@@ -147,19 +157,19 @@ internal class NGTCP2Stream(
     
     private var isClosed: Boolean = false
     
+    /**
+     * Read up to maxBytes from the stream. Returns immediately with whatever is
+     * currently available (possibly empty). This allows drain()-then-parse logic
+     * to complete: first read returns CONNACK bytes, second read returns empty
+     * so drain() breaks and tryConsumeNextPacket() can run. Never blocks waiting
+     * for more data (native recv_buf is already populated by the event loop).
+     */
     override suspend fun read(maxBytes: Int): ByteArray {
         if (isClosed) {
             throw IllegalStateException("Stream is closed")
         }
-
-        while (!isClosed) {
-            val data = client.readStreamData(streamId)
-            if (data != null && data.isNotEmpty()) {
-                return data
-            }
-            delay(5)
-        }
-        return ByteArray(0)
+        val data = client.readStreamData(streamId) ?: return ByteArray(0)
+        return data
     }
     
     override suspend fun write(data: ByteArray) {

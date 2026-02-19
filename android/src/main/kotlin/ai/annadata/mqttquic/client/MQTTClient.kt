@@ -1,5 +1,6 @@
 package ai.annadata.mqttquic.client
 
+import android.util.Log
 import ai.annadata.mqttquic.mqtt.MQTT5PropertyType
 import ai.annadata.mqttquic.mqtt.MQTTConnAckCode
 import ai.annadata.mqttquic.mqtt.MQTTMessageType
@@ -15,6 +16,7 @@ import ai.annadata.mqttquic.transport.MQTTStreamReader
 import ai.annadata.mqttquic.transport.MQTTStreamWriter
 import ai.annadata.mqttquic.transport.QUICStreamReader
 import ai.annadata.mqttquic.transport.QUICStreamWriter
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -24,6 +26,9 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 
 /**
  * High-level MQTT client: connect, publish, subscribe, disconnect.
@@ -62,6 +67,10 @@ class MQTTClient {
     var onPublish: ((String, ByteArray) -> Unit)? = null
     /** Per-connection Topic Alias map (alias -> topic name) for MQTT 5.0 incoming PUBLISH. */
     private val topicAliasMap = mutableMapOf<Int, String>()
+    /** Pending SUBACK by packet ID. Message loop completes with (fullPacket, hdrLen). Single reader: only message loop reads stream. */
+    private val pendingSubacks = mutableMapOf<Int, CompletableDeferred<Pair<ByteArray, Int>>>()
+    /** Pending UNSUBACK by packet ID. Message loop completes when UNSUBACK is read. */
+    private val pendingUnsubacks = mutableMapOf<Int, CompletableDeferred<Unit>>()
     private val lock = Mutex()
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -77,6 +86,29 @@ class MQTTClient {
     /** Assigned Client Identifier from CONNACK when client sent empty ClientID; null otherwise. */
     fun getAssignedClientIdentifier(): String? = runBlocking { lock.withLock { assignedClientIdentifier } }
 
+    /** Resolved IP used for the current/last QUIC connection (from native getaddrinfo). Used by plugin to cache for reconnect when Java DNS fails. */
+    fun getLastResolvedAddress(): String? = (quicClient as? NGTCP2Client)?.getLastResolvedAddress()
+
+    /** Read full MQTT fixed header (1 byte type + 1–4 bytes remaining length per MQTT v5.0 §2.1.4). Returns (msgType, remLen, fixedHeaderBytes). */
+    private suspend fun readFixedHeader(r: MQTTStreamReader): Triple<Byte, Int, ByteArray> {
+        Log.i("MQTTClient", "readFixedHeader: requesting first byte")
+        var fixed = r.readexactly(1).toMutableList()
+        val firstByte = fixed[0].toInt() and 0xFF
+        Log.i("MQTTClient", "readFixedHeader: got type byte 0x${Integer.toHexString(firstByte)} ($firstByte)")
+        repeat(5) { // 1 type + up to 4 remaining-length bytes (Variable Byte Integer)
+            try {
+                val (rem, _) = MQTTProtocol.decodeRemainingLength(fixed.toByteArray(), 1)
+                Log.i("MQTTClient", "readFixedHeader: decoded remLen=$rem fixedSize=${fixed.size}")
+                return Triple(fixed[0], rem, fixed.toByteArray())
+            } catch (_: IllegalArgumentException) {
+                if (fixed.size > 5) throw IllegalArgumentException("Invalid remaining length")
+                fixed.addAll(r.readexactly(1).toList())
+                Log.i("MQTTClient", "readFixedHeader: added byte, fixedSize=${fixed.size}")
+            }
+        }
+        throw IllegalArgumentException("Invalid remaining length")
+    }
+
     suspend fun connect(
         host: String,
         port: Int,
@@ -85,7 +117,8 @@ class MQTTClient {
         password: String?,
         cleanSession: Boolean,
         keepalive: Int,
-        sessionExpiryInterval: Int? = null
+        sessionExpiryInterval: Int? = null,
+        connectAddress: String? = null
     ) {
         lock.withLock {
             if (state == State.CONNECTING) {
@@ -109,7 +142,7 @@ class MQTTClient {
             } else {
                 QuicClientStub(connack.toList())
             }
-            quic.connect(host, port)
+            quic.connect(host, port, connectAddress)
             val s = quic.openStream()
             val r = QUICStreamReader(s)
             val w = QUICStreamWriter(s)
@@ -146,50 +179,118 @@ class MQTTClient {
             w.write(connectData)
             w.drain()
 
-            // MQTT 5.0: server may send AUTH before CONNACK; loop until CONNACK
+            // MQTT 5.0: server may send AUTH before CONNACK; loop until CONNACK. Timeout so we don't block 30s until ERR_IDLE_CLOSE.
+            // Efficient path: drain stream (read until empty), then parse first complete packet; repeat until CONNACK or timeout.
             var full: ByteArray
             var hdrLen: Int
-            if (activeProtocolVersion == MQTTProtocolLevel.V5) {
-                while (true) {
-                    val fixed = r.readexactly(2)
-                    val (msgType, remLen, hLen) = MQTTProtocol.parseFixedHeader(fixed)
-                    val rest = r.readexactly(remLen)
-                    full = fixed + rest
-                    hdrLen = hLen
-                    when (msgType) {
-                        MQTTMessageType.CONNACK -> break
-                        MQTTMessageType.AUTH -> {
-                            lock.withLock { state = State.ERROR }
-                            try {
-                                w.write(MQTT5Protocol.buildDisconnectV5(MQTT5ReasonCode.BAD_AUTHENTICATION_METHOD_DISC))
-                                w.drain()
-                                w.close()
-                            } catch (_: Exception) { /* ignore */ }
-                            throw IllegalArgumentException("Enhanced authentication not supported")
-                        }
-                        MQTTMessageType.DISCONNECT -> {
-                            lock.withLock { state = State.ERROR }
-                            throw IllegalArgumentException("Server sent DISCONNECT before CONNACK")
-                        }
-                        else -> {
-                            lock.withLock { state = State.ERROR }
-                            throw IllegalArgumentException("Expected CONNACK or AUTH, got $msgType")
+            val connackTimeoutMs = 15_000L
+            try {
+                if (activeProtocolVersion == MQTTProtocolLevel.V5) {
+                    Log.i("MQTTClient", "reading CONNACK (MQTT5) timeout=${connackTimeoutMs}ms (drain then parse)")
+                    withTimeout(connackTimeoutMs) {
+                        while (true) {
+                            if (r is QUICStreamReader) {
+                                r.drain()
+                                val avail = r.available()
+                                Log.i("MQTTClient", "CONNACK loop: after drain available=$avail")
+                                val packet = r.tryConsumeNextPacket()
+                                if (packet != null) {
+                                    val (msgType, _, fixedLen) = MQTTProtocol.parseFixedHeader(packet.copyOf(minOf(5, packet.size)))
+                                    val typeByte = msgType.toInt() and 0xFF
+                                    Log.i("MQTTClient", "CONNACK loop: packet type=0x${Integer.toHexString(typeByte)} len=${packet.size} hdrLen=$fixedLen")
+                                    when (typeByte) {
+                                        0x20 -> {
+                                            full = packet
+                                            hdrLen = fixedLen
+                                            return@withTimeout
+                                        }
+                                        0xF0 -> {
+                                            lock.withLock { state = State.ERROR }
+                                            try {
+                                                w.write(MQTT5Protocol.buildDisconnectV5(MQTT5ReasonCode.BAD_AUTHENTICATION_METHOD_DISC))
+                                                w.drain()
+                                                w.close()
+                                            } catch (_: Exception) { /* ignore */ }
+                                            throw IllegalArgumentException("Enhanced authentication not supported")
+                                        }
+                                        0xE0 -> {
+                                            lock.withLock { state = State.ERROR }
+                                            throw IllegalArgumentException("Server sent DISCONNECT before CONNACK")
+                                        }
+                                        else -> Log.i("MQTTClient", "CONNACK loop: skipping non-CONNACK packet type=0x${Integer.toHexString(typeByte)}")
+                                    }
+                                } else {
+                                    // Only delay when no data; if we have data but no packet, retry soon (avoid suspend then timeout before next iteration)
+                                    if (avail == 0) delay(50) else delay(10)
+                                }
+                            } else {
+                                // Fallback for non-QUIC reader (e.g. mock)
+                                val (msgType, remLen, fixed) = readFixedHeader(r)
+                                val typeByte = fixed[0].toInt() and 0xFF
+                                val rest = r.readexactly(remLen)
+                                full = fixed + rest
+                                hdrLen = fixed.size
+                                when (typeByte) {
+                                    0x20 -> return@withTimeout
+                                    0xF0 -> {
+                                        lock.withLock { state = State.ERROR }
+                                        try {
+                                            w.write(MQTT5Protocol.buildDisconnectV5(MQTT5ReasonCode.BAD_AUTHENTICATION_METHOD_DISC))
+                                            w.drain()
+                                            w.close()
+                                        } catch (_: Exception) { /* ignore */ }
+                                        throw IllegalArgumentException("Enhanced authentication not supported")
+                                    }
+                                    0xE0 -> {
+                                        lock.withLock { state = State.ERROR }
+                                        throw IllegalArgumentException("Server sent DISCONNECT before CONNACK")
+                                    }
+                                    else -> { /* skip; continue */ }
+                                }
+                            }
                         }
                     }
+                    Log.i("MQTTClient", "got CONNACK (MQTT5) (fullLen=${full.size} hdrLen=$hdrLen)")
+                } else {
+                    Log.i("MQTTClient", "reading CONNACK (3.1.1) timeout=${connackTimeoutMs}ms")
+                    withTimeout(connackTimeoutMs) {
+                        if (r is QUICStreamReader) {
+                            while (true) {
+                                r.drain()
+                                val packet = r.tryConsumeNextPacket()
+                                if (packet != null) {
+                                    val (msgType, _, fixedLen) = MQTTProtocol.parseFixedHeader(packet.copyOf(minOf(5, packet.size)))
+                                    if (msgType == MQTTMessageType.CONNACK) {
+                                        full = packet
+                                        hdrLen = fixedLen
+                                        break
+                                    }
+                                    lock.withLock { state = State.ERROR }
+                                    throw IllegalArgumentException("expected CONNACK, got $msgType")
+                                }
+                                delay(50)
+                            }
+                        } else {
+                            val (msgType, remLen, fixed) = readFixedHeader(r)
+                            val rest = r.readexactly(remLen)
+                            full = fixed + rest
+                            hdrLen = fixed.size
+                            if (msgType != MQTTMessageType.CONNACK) {
+                                lock.withLock { state = State.ERROR }
+                                throw IllegalArgumentException("expected CONNACK, got $msgType")
+                            }
+                        }
+                        Log.i("MQTTClient", "got CONNACK (3.1.1)")
+                    }
                 }
-            } else {
-                val fixed = r.readexactly(2)
-                val (msgType, remLen, hLen) = MQTTProtocol.parseFixedHeader(fixed)
-                val rest = r.readexactly(remLen)
-                full = fixed + rest
-                hdrLen = hLen
-                if (msgType != MQTTMessageType.CONNACK) {
-                    lock.withLock { state = State.ERROR }
-                    throw IllegalArgumentException("expected CONNACK, got $msgType")
-                }
+            } catch (e: TimeoutCancellationException) {
+                lock.withLock { state = State.ERROR }
+                Log.w("MQTTClient", "CONNACK read timed out after ${connackTimeoutMs}ms", e)
+                throw IllegalStateException("CONNACK read timed out. Drain+parse did not receive a complete CONNACK in time. Ask server to send full CONNACK (loop writev_stream until all bytes sent); or check network.", e)
             }
 
             if (activeProtocolVersion == MQTTProtocolLevel.V5) {
+                Log.i("MQTTClient", "parsing CONNACK v5 (offset=$hdrLen)")
                 val (_, reasonCode, props) = MQTT5Protocol.parseConnackV5(full, hdrLen)
                 if (reasonCode != MQTT5ReasonCode.SUCCESS) {
                     lock.withLock { state = State.ERROR }
@@ -210,21 +311,37 @@ class MQTTClient {
             }
 
             lock.withLock { state = State.CONNECTED }
+            Log.i("MQTTClient", "state=CONNECTED, starting message and keepalive loops")
             startMessageLoop()
             startKeepaliveLoop()
         } catch (e: Exception) {
-            val wr = lock.withLock {
+            val (wr, quic) = lock.withLock {
                 val w = writer
+                val q = quicClient
                 quicClient = null
                 stream = null
                 reader = null
                 writer = null
                 state = State.ERROR
-                w
+                Pair(w, q)
             }
             try {
                 wr?.close()
             } catch (_: Exception) { /* ignore */ }
+            // Skip quic.close() on timeout/cancellation: server may have already sent idle close, and native close() can crash. Prefer leak over crash.
+            val isTimeoutOrCancel = e is TimeoutCancellationException ||
+                e is CancellationException ||
+                e.cause is TimeoutCancellationException ||
+                (e.message?.contains("Timed out", ignoreCase = true) == true)
+            if (!isTimeoutOrCancel) {
+                try {
+                    quic?.close()
+                } catch (ex: Exception) {
+                    Log.w("MQTTClient", "Error closing QUIC connection on connect failure", ex)
+                }
+            } else {
+                Log.i("MQTTClient", "Skipping quic.close() on timeout/cancellation to avoid native crash")
+            }
             throw e
         }
     }
@@ -260,59 +377,66 @@ class MQTTClient {
 
     suspend fun subscribe(topic: String, qos: Int, subscriptionIdentifier: Int? = null) {
         if (getState() != State.CONNECTED) throw IllegalStateException("not connected")
-        val (r, w, version) = lock.withLock { Triple(reader, writer, activeProtocolVersion) }
-        if (r == null || w == null) throw IllegalStateException("no reader/writer")
+        val (w, version) = lock.withLock { writer to activeProtocolVersion }
+        if (w == null) throw IllegalStateException("no writer")
 
         val pid = nextPacketIdUsed()
-        val data: ByteArray
-        if (version == MQTTProtocolLevel.V5) {
-            data = MQTT5Protocol.buildSubscribeV5(pid, topic, qos, subscriptionIdentifier)
-        } else {
-            data = MQTTProtocol.buildSubscribe(pid, topic, qos)
-        }
-        w.write(data)
-        w.drain()
-
-        val fixed = r.readexactly(2)
-        val (_, remLen, hdrLen) = MQTTProtocol.parseFixedHeader(fixed)
-        val rest = r.readexactly(remLen)
-        val full = fixed + rest
-        
-        if (version == MQTTProtocolLevel.V5) {
-            val (_, reasonCodes, _) = MQTT5Protocol.parseSubackV5(full, hdrLen)
-            if (reasonCodes.isNotEmpty()) {
-                val firstRC = reasonCodes[0]
-                if (firstRC != MQTT5ReasonCode.GRANTED_QOS_0 && firstRC != MQTT5ReasonCode.GRANTED_QOS_1 && firstRC != MQTT5ReasonCode.GRANTED_QOS_2) {
-                    throw IllegalArgumentException("SUBACK error $firstRC")
-                }
+        val deferred = CompletableDeferred<Pair<ByteArray, Int>>()
+        lock.withLock { pendingSubacks[pid] = deferred }
+        try {
+            val data: ByteArray
+            if (version == MQTTProtocolLevel.V5) {
+                data = MQTT5Protocol.buildSubscribeV5(pid, topic, qos, subscriptionIdentifier)
+            } else {
+                data = MQTTProtocol.buildSubscribe(pid, topic, qos)
             }
-        } else {
-            val (_, rc, _) = MQTTProtocol.parseSuback(full, hdrLen)
-            if (rc > 0x02) throw IllegalArgumentException("SUBACK error $rc")
+            w.write(data)
+            w.drain()
+
+            val (full, hdrLen) = withTimeout(15_000L) { deferred.await() }
+
+            if (version == MQTTProtocolLevel.V5) {
+                val (_, reasonCodes, _) = MQTT5Protocol.parseSubackV5(full, hdrLen)
+                if (reasonCodes.isNotEmpty()) {
+                    val firstRC = reasonCodes[0]
+                    if (firstRC != MQTT5ReasonCode.GRANTED_QOS_0 && firstRC != MQTT5ReasonCode.GRANTED_QOS_1 && firstRC != MQTT5ReasonCode.GRANTED_QOS_2) {
+                        throw IllegalArgumentException("SUBACK error $firstRC")
+                    }
+                }
+            } else {
+                val (_, rc, _) = MQTTProtocol.parseSuback(full, hdrLen)
+                if (rc > 0x02) throw IllegalArgumentException("SUBACK error $rc")
+            }
+        } finally {
+            lock.withLock { pendingSubacks.remove(pid) }
         }
     }
 
     suspend fun unsubscribe(topic: String) {
         if (getState() != State.CONNECTED) throw IllegalStateException("not connected")
-        val (r, w, version) = lock.withLock {
+        val (w, version) = lock.withLock {
             subscribedTopics.remove(topic)
-            Triple(reader, writer, activeProtocolVersion)
+            writer to activeProtocolVersion
         }
-        if (r == null || w == null) throw IllegalStateException("no reader/writer")
+        if (w == null) throw IllegalStateException("no writer")
 
         val pid = nextPacketIdUsed()
-        val data: ByteArray
-        if (version == MQTTProtocolLevel.V5) {
-            data = MQTT5Protocol.buildUnsubscribeV5(pid, listOf(topic))
-        } else {
-            data = MQTTProtocol.buildUnsubscribe(pid, listOf(topic))
-        }
-        w.write(data)
-        w.drain()
+        val deferred = CompletableDeferred<Unit>()
+        lock.withLock { pendingUnsubacks[pid] = deferred }
+        try {
+            val data: ByteArray
+            if (version == MQTTProtocolLevel.V5) {
+                data = MQTT5Protocol.buildUnsubscribeV5(pid, listOf(topic))
+            } else {
+                data = MQTTProtocol.buildUnsubscribe(pid, listOf(topic))
+            }
+            w.write(data)
+            w.drain()
 
-        val fixed = r.readexactly(2)
-        val (_, remLen, _) = MQTTProtocol.parseFixedHeader(fixed)
-        r.readexactly(remLen)
+            withTimeout(15_000L) { deferred.await() }
+        } finally {
+            lock.withLock { pendingUnsubacks.remove(pid) }
+        }
     }
 
     suspend fun disconnect() {
@@ -322,6 +446,8 @@ class MQTTClient {
         keepaliveJob = null
         job?.cancel()
         job?.join()
+
+        failPendingSubacksUnsubacks(IllegalStateException("Disconnected"))
 
         val (w, version) = lock.withLock {
             val wr = writer
@@ -369,6 +495,15 @@ class MQTTClient {
         pid
     }
 
+    private suspend fun failPendingSubacksUnsubacks(cause: Throwable) {
+        lock.withLock {
+            pendingSubacks.values.forEach { it.completeExceptionally(cause) }
+            pendingSubacks.clear()
+            pendingUnsubacks.values.forEach { it.completeExceptionally(cause) }
+            pendingUnsubacks.clear()
+        }
+    }
+
     /** Send PINGREQ at effectiveKeepalive interval so server sees activity and does not close (idle/keepalive). [MQTT-3.1.2-20] */
     private fun startKeepaliveLoop() {
         keepaliveJob?.cancel()
@@ -394,11 +529,24 @@ class MQTTClient {
             while (isActive) {
                 val r = lock.withLock { reader } ?: break
                 try {
-                    val fixed = r.readexactly(2)
-                    val (msgType, remLen, _) = MQTTProtocol.parseFixedHeader(fixed)
+                    val (msgType, remLen, fixed) = readFixedHeader(r)
                     val rest = r.readexactly(remLen)
                     val type = (msgType.toInt() and 0xF0).toByte()
                     when (type) {
+                        MQTTMessageType.SUBACK -> {
+                            if (rest.size >= 2) {
+                                val pid = ((rest[0].toInt() and 0xFF) shl 8) or (rest[1].toInt() and 0xFF)
+                                val full = fixed + rest
+                                val hdrLen = fixed.size
+                                lock.withLock { pendingSubacks.remove(pid)?.complete(Pair(full, hdrLen)) }
+                            }
+                        }
+                        MQTTMessageType.UNSUBACK -> {
+                            if (rest.size >= 2) {
+                                val pid = ((rest[0].toInt() and 0xFF) shl 8) or (rest[1].toInt() and 0xFF)
+                                lock.withLock { pendingUnsubacks.remove(pid)?.complete(Unit) }
+                            }
+                        }
                         MQTTMessageType.DISCONNECT -> {
                             val reasonCode = if (rest.isNotEmpty()) rest[0].toInt() and 0xFF else 0x00
                             lock.withLock {
@@ -412,6 +560,7 @@ class MQTTClient {
                                 topicAliasMap.clear()
                                 state = if (reasonCode >= 0x80) State.ERROR else State.DISCONNECTED
                             }
+                            failPendingSubacksUnsubacks(IllegalStateException("Server sent DISCONNECT"))
                             break
                         }
                         MQTTMessageType.PINGREQ -> {
@@ -473,6 +622,7 @@ class MQTTClient {
                             topicAliasMap.clear()
                             state = State.DISCONNECTED
                         }
+                        failPendingSubacksUnsubacks(e)
                     }
                     break
                 }

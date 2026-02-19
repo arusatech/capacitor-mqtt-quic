@@ -7,6 +7,8 @@ import kotlinx.coroutines.delay
  * Phase 2 implements over QUIC stream.
  */
 interface MQTTStreamReader {
+    /** Number of bytes currently buffered (without reading from stream). Used to skip unwanted packets only when safe. */
+    suspend fun available(): Int
     suspend fun read(maxBytes: Int): ByteArray
     suspend fun readexactly(n: Int): ByteArray
 }
@@ -49,6 +51,8 @@ class MockStreamBuffer(initialReadData: ByteArray = ByteArray(0)) {
  * Mock reader over MockStreamBuffer.
  */
 class MockStreamReader(private val buffer: MockStreamBuffer) : MQTTStreamReader {
+
+    override suspend fun available(): Int = buffer.readBuffer.size
 
     override suspend fun read(maxBytes: Int): ByteArray {
         if (buffer.isClosed && buffer.readBuffer.isEmpty()) return ByteArray(0)

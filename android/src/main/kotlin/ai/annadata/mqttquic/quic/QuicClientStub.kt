@@ -36,7 +36,7 @@ class QuicClientStub(private val initialReadData: List<Byte> = emptyList()) : Qu
     private var buffer: MockStreamBuffer? = null
     private var streamId = 0L
 
-    override suspend fun connect(host: String, port: Int) {
+    override suspend fun connect(host: String, port: Int, connectAddress: String?) {
         buffer = MockStreamBuffer(initialReadData.toByteArray())
         streamId = 0L
     }
