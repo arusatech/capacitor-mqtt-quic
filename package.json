@@ -1,6 +1,6 @@
 {
   "name": "@annadata/capacitor-mqtt-quic",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "type": "module",
   "description": "MQTT-over-QUIC client for Capacitor (iOS, Android, Web). Native: ngtcp2+WolfSSL; Web: MQTT over WebSocket (WSS), same API.",
   "main": "dist/plugin.cjs.js",
