@@ -1,17 +1,16 @@
 // swift-tools-version: 5.9
 import PackageDescription
 
-// MqttQuicPlugin iOS – Swift Package for Capacitor 8 (SPM).
-// Requires Libs/MqttQuicLibs.xcframework. After building OpenSSL, ngtcp2, nghttp3
-// (see build-openssl.sh, build-ngtcp2.sh, build-nghttp3.sh), run:
+// AnnadataCapacitorMqttQuic – Swift Package for Capacitor 8 (SPM).
+// Requires Libs/MqttQuicLibs.xcframework. After building (see build-native.sh), run:
 //   ./create-xcframework.sh
 let package = Package(
-    name: "MqttQuicPlugin",
-    platforms: [.iOS(.v14)],
+    name: "AnnadataCapacitorMqttQuic",
+    platforms: [.iOS(.v15)],
     products: [
         .library(
-            name: "MqttQuicPlugin",
-            targets: ["MqttQuicPlugin"]
+            name: "AnnadataCapacitorMqttQuic",
+            targets: ["AnnadataCapacitorMqttQuic"]
         )
     ],
     dependencies: [
@@ -38,7 +37,7 @@ let package = Package(
             ]
         ),
         .target(
-            name: "MqttQuicPlugin",
+            name: "AnnadataCapacitorMqttQuic",
             dependencies: [
                 "NGTCP2Bridge",
                 .product(name: "Capacitor", package: "capacitor-swift-pm")

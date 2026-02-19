@@ -4,7 +4,7 @@
 //
 
 import XCTest
-@testable import MqttQuicPlugin
+@testable import AnnadataCapacitorMqttQuic
 
 final class MQTTProtocolTests: XCTestCase {
 

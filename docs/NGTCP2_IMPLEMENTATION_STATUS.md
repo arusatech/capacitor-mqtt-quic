@@ -129,7 +129,7 @@ The ngtcp2 integration replaces the stub QUIC implementations (`QuicClientStub`)
    - Implement TLS 1.3 handshake
    - Implement UDP packet handlers
 
-4. **Update `MqttQuicPlugin.podspec`:**
+4. **Update `AnnadataCapacitorMqttQuic.podspec`:**
    - Add ngtcp2 library linking
    - Add header search paths
 

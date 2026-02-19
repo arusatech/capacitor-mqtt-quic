@@ -182,7 +182,7 @@ Implement `MqttQuicService` web fallback using `mqtt.js` or similar library.
 ```
 capacitor-mqtt-quic/
 ├── ios/
-│   ├── MqttQuicPlugin.podspec
+│   ├── AnnadataCapacitorMqttQuic.podspec
 │   └── Sources/MqttQuicPlugin/
 │       ├── MQTT/              # Phase 1
 │       ├── Transport/         # Phase 1, 2

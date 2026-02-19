@@ -337,4 +337,4 @@ After building ngtcp2/nghttp3:
 2. Replace `QuicClientStub` with `NGTCP2Client` in `MQTTClient.kt`
 3. Test connection to MQTT server over QUIC
 
-See `NGTCP2_INTEGRATION_PLAN.md` for detailed implementation guide.
+See [NGTCP2_INTEGRATION_PLAN.md](../docs/NGTCP2_INTEGRATION_PLAN.md) for detailed implementation guide.

@@ -34,7 +34,7 @@ If you have access to pre-built ngtcp2, nghttp3, and OpenSSL libraries:
 2. Place `libnghttp3.a` in `ios/libs/`
 3. Place OpenSSL libraries (`libssl.a`, `libcrypto.a`) in `ios/libs/`
 4. Place headers in `ios/include/ngtcp2/`, `ios/include/nghttp3/`, and `ios/include/openssl/`
-5. Update `MqttQuicPlugin.podspec` to link against these libraries
+5. Update `AnnadataCapacitorMqttQuic.podspec` to link against these libraries
 
 ### Option 2: Build from Source
 
@@ -154,7 +154,7 @@ Then clean and rebuild the iOS app so it links the new xcframework. See the appâ
 
 ### Option A: CocoaPods
 
-Update `ios/MqttQuicPlugin.podspec`:
+Update `ios/AnnadataCapacitorMqttQuic.podspec`:
 
 ```ruby
 Pod::Spec.new do |s|
@@ -342,4 +342,4 @@ After building ngtcp2:
 2. Replace `QuicClientStub` with `NGTCP2Client` in `MQTTClient.swift`
 3. Test connection to MQTT server over QUIC
 
-See `NGTCP2_INTEGRATION_PLAN.md` for detailed implementation guide.
+See [NGTCP2_INTEGRATION_PLAN.md](../docs/NGTCP2_INTEGRATION_PLAN.md) for detailed implementation guide.

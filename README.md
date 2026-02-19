@@ -2,7 +2,7 @@
 
 MQTT-over-QUIC Capacitor plugin for **iOS**, **Android**, and **Web (browser/PWA)**. Native: ngtcp2 + WolfSSL for QUIC; Web: MQTT over WebSocket (WSS), same API and event listeners.
 
-**Capacitor:** Supports **Capacitor 7** and **Capacitor 8**.
+**Capacitor:** **8.0+** (tested with Capacitor 8).
 
 **Features:**
 - ✅ **MQTT 5.0** support with full properties and reason codes
@@ -20,7 +20,7 @@ MQTT-over-QUIC Capacitor plugin for **iOS**, **Android**, and **Web (browser/PWA
   - Transport abstraction (StreamReader/StreamWriter)
 - **Phase 2**: QUIC transport (ngtcp2) + stream adapters - **In Progress** ⏳
   - Currently uses stub implementations for testing
-  - See [NGTCP2_INTEGRATION_PLAN.md](./NGTCP2_INTEGRATION_PLAN.md) for build instructions
+  - See [NGTCP2_INTEGRATION_PLAN.md](./docs/NGTCP2_INTEGRATION_PLAN.md) for build instructions
 - **Phase 3**: MQTT client API + Capacitor plugin bridge - **Complete** ✅
 - **Phase 4**: Platform integration in annadata-production - **Complete** ✅
 
@@ -274,7 +274,7 @@ await MqttQuic.publish({
 | **Reason Codes** | Detailed error information | Better debugging |
 | **Topic Aliases** | Reduce bandwidth | High-frequency publishing |
 
-See [MQTT5_IMPLEMENTATION_COMPLETE.md](./MQTT5_IMPLEMENTATION_COMPLETE.md) for full details.
+See [MQTT5_IMPLEMENTATION_COMPLETE.md](./docs/MQTT5_IMPLEMENTATION_COMPLETE.md) for full details.
 
 ## TypeScript Interface
 
@@ -357,10 +357,10 @@ This script builds WolfSSL → nghttp3 → ngtcp2 in the correct order for both 
 For detailed manual build instructions, see:
 - **iOS**: [ios/NGTCP2_BUILD_INSTRUCTIONS.md](./ios/NGTCP2_BUILD_INSTRUCTIONS.md)
 - **Android**: [android/NGTCP2_BUILD_INSTRUCTIONS.md](./android/NGTCP2_BUILD_INSTRUCTIONS.md)
-- **Full Plan**: [NGTCP2_INTEGRATION_PLAN.md](./NGTCP2_INTEGRATION_PLAN.md)
+- **Full Plan**: [NGTCP2_INTEGRATION_PLAN.md](./docs/NGTCP2_INTEGRATION_PLAN.md)
 
 **Prerequisites:**
-- iOS: macOS with Xcode 14+
+- iOS: macOS with Xcode 15+
 - Android: Android Studio with NDK r25+ (auto-detected from `$ANDROID_HOME`)
 
 ## Production / First-time build
@@ -431,12 +431,25 @@ npm publish --access public
 
 See **docs/PRODUCTION_PUBLISH_STEPS.md** for the full checklist.
 
+### Connection error: `{"code":"UNIMPLEMENTED"}`
+
+Capacitor returns this when the **native plugin method is not found** on the current platform. Common causes and fixes:
+
+| Platform | Check |
+|----------|--------|
+| **iOS** | Plugin must be linked. Run `npx cap sync ios` and `cd ios && pod install`, then rebuild in Xcode. Ensure `@annadata/capacitor-mqtt-quic` is in your app’s `package.json` and that the iOS project includes the plugin (Capacitor should auto-discover it). If you use a custom Podfile, ensure the AnnadataCapacitorMqttQuic plugin target is included. |
+| **Android** | Run `npx cap sync android` and rebuild. If you see "WolfSSL not found", run the one-time native build (see above). |
+| **Web / browser** | In browser, the plugin uses the **web** implementation (WSS or WebTransport). If you get UNIMPLEMENTED in the browser, the app may be resolving the native bridge instead of the web plugin—e.g. wrong `capacitor.config` or build. Ensure you’re opening the app as a web build (e.g. `ionic serve` or `cap run web`), not a native app with a WebView. |
+
+After adding the plugin or changing native code, always run **`npx cap sync`** and on iOS **`pod install`**, then rebuild the native app.
+
 ## Development
 
 ### Build Plugin
 
 ```bash
-cd production/capacitor-mqtt-quic
+git clone https://github.com/annadata/capacitor-mqtt-quic.git
+cd capacitor-mqtt-quic
 npm install
 npm run build
 ```
@@ -444,8 +457,8 @@ npm run build
 ### Add to Capacitor App
 
 ```bash
-cd production/annadata-production
-npm i @annadata/capacitor-mqtt-quic
+cd your-capacitor-app
+npm install @annadata/capacitor-mqtt-quic
 npx cap sync
 ```
 
@@ -470,14 +483,14 @@ await MqttQuic.connect({
 
 ## Publishing (maintainers)
 
-To pack the plugin **with native libs** and publish to npm, follow **[PRODUCTION_PUBLISH_STEPS.md](./PRODUCTION_PUBLISH_STEPS.md)**.
+To pack the plugin **with native libs** and publish to npm, follow **[PRODUCTION_PUBLISH_STEPS.md](./docs/PRODUCTION_PUBLISH_STEPS.md)**.
 
 ## Documentation
 
-- [Implementation Summary](./IMPLEMENTATION_SUMMARY.md) - Complete project overview
-- [MQTT 5.0 Implementation](./MQTT5_IMPLEMENTATION_COMPLETE.md) - MQTT 5.0 features and usage
-- [ngtcp2 Integration Plan](./NGTCP2_INTEGRATION_PLAN.md) - Build instructions for real QUIC
-- [MQTT Version Analysis](./MQTT_VERSION_ANALYSIS.md) - Why MQTT 5.0?
+- [Implementation Summary](./docs/IMPLEMENTATION_SUMMARY.md) - Complete project overview
+- [MQTT 5.0 Implementation](./docs/MQTT5_IMPLEMENTATION_COMPLETE.md) - MQTT 5.0 features and usage
+- [ngtcp2 Integration Plan](./docs/NGTCP2_INTEGRATION_PLAN.md) - Build instructions for real QUIC
+- [MQTT Version Analysis](./docs/MQTT_VERSION_ANALYSIS.md) - Why MQTT 5.0?
 
 ## Web / browser support
 
@@ -549,7 +562,7 @@ await MqttQuic.connect({
 - **iOS:** 15.0+
 - **Android:** API 21+ (Android 5.0+)
 - **Web:** Any modern browser; MQTT over WSS
-- **Capacitor:** 7.0+
+- **Capacitor:** 8.0+
 - **QUIC:** ngtcp2 + WolfSSL on native; on web, optional WebTransport (browser's HTTP/3/QUIC) when server supports it
 
 ## Author

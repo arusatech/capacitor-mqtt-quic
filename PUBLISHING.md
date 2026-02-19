@@ -2,7 +2,7 @@
 
 This guide explains how to publish the plugin to npm for use in mobile apps.
 
-**For a production-grade pack (including native libs under the plugin) and full checklist, use [PRODUCTION_PUBLISH_STEPS.md](./PRODUCTION_PUBLISH_STEPS.md).**
+**For a production-grade pack (including native libs under the plugin) and full checklist, use [PRODUCTION_PUBLISH_STEPS.md](./docs/PRODUCTION_PUBLISH_STEPS.md).**
 
 ## Prerequisites
 
@@ -94,10 +94,9 @@ npm pack --dry-run | grep "ios/libs"
 
 Should show files like:
 - `ios/libs/libngtcp2.a`
+- `ios/libs/libngtcp2_crypto_wolfssl.a`
 - `ios/libs/libnghttp3.a`
-- `ios/libs/libssl.a`
-- `ios/libs/libcrypto.a`
-- `ios/libs/libngtcp2_crypto_quictls.a`
+- `ios/libs/libwolfssl.a`
 
 ### 6. Version Bump
 

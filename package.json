@@ -11,6 +11,7 @@
     "dist",
     "ios",
     "android",
+    "Package.swift",
     "AnnadataCapacitorMqttQuic.podspec",
     "README.md",
     "deps-versions.sh",
@@ -42,7 +43,8 @@
   ],
   "capacitor": {
     "ios": {
-      "src": "ios"
+      "src": "ios",
+      "name": "AnnadataCapacitorMqttQuic"
     },
     "android": {
       "src": "android"

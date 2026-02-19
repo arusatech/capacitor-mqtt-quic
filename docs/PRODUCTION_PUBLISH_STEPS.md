@@ -9,7 +9,7 @@ This checklist makes the plugin **production-grade**: pack everything needed (in
 ## Prerequisites
 
 - Node.js 18+
-- **iOS:** macOS, Xcode 14+
+- **iOS:** macOS, Xcode 15+
 - **Android:** Android Studio, NDK r25+ (e.g. via `$ANDROID_HOME/ndk/<version>`)
 - npm account with access to `@annadata` scope
 

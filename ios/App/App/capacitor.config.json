@@ -1,6 +1,6 @@
 {
 	"appId": "ai.annadata.mqttquic",
-	"appName": "MqttQuicPlugin",
+	"appName": "AnnadataCapacitorMqttQuic",
 	"webDir": "www",
 	"packageClassList": [
 		"MqttQuicPlugin"
