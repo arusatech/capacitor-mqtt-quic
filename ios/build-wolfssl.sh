@@ -56,10 +56,15 @@ IOS_SDK_PATH=$(xcrun --sdk "$SDK" --show-sdk-path)
 if [ ! -d "$WOLFSSL_SOURCE_DIR" ] && [ -d "$PROJECT_DIR/../wolfssl-5.8.4-stable" ]; then
     WOLFSSL_SOURCE_DIR="$PROJECT_DIR/../wolfssl-5.8.4-stable"
 fi
+# Clone WolfSSL if missing
 if [ ! -d "$WOLFSSL_SOURCE_DIR" ]; then
-    echo "Error: WolfSSL source not found at $WOLFSSL_SOURCE_DIR"
-    echo "Clone: git clone --depth 1 -b ${WOLFSSL_TAG:-v5.8.4-stable} ${WOLFSSL_REPO_URL:-https://github.com/wolfSSL/wolfssl.git} $DEPS_DIR/wolfssl"
-    exit 1
+    echo "WolfSSL source not found. Cloning into $DEPS_DIR/wolfssl ..."
+    mkdir -p "$DEPS_DIR"
+    git clone --depth 1 -b "${WOLFSSL_TAG:-v5.8.4-stable}" "${WOLFSSL_REPO_URL:-https://github.com/wolfSSL/wolfssl.git}" "$DEPS_DIR/wolfssl" || {
+        echo "Error: Failed to clone WolfSSL"
+        exit 1
+    }
+    WOLFSSL_SOURCE_DIR="$DEPS_DIR/wolfssl"
 fi
 
 echo "Building WolfSSL (TLS 1.3 + QUIC) for iOS"
