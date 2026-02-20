@@ -210,6 +210,23 @@ class MqttQuicPlugin : Plugin() {
         }
     }
 
+    /**
+     * Send MQTT PINGREQ and wait for PINGRESP. Resets server's idle timer.
+     * Returns { ok: true } if PINGRESP received within timeout, { ok: false } on timeout or error.
+     */
+    @PluginMethod
+    fun sendKeepalive(call: PluginCall) {
+        val timeoutMs = call.getInt("timeoutMs", 5000)
+        scope.launch {
+            try {
+                val ok = client.sendMqttPing((timeoutMs ?: 5000).toLong().coerceIn(1000, 15000))
+                call.resolve(JSObject().put("ok", ok))
+            } catch (e: Exception) {
+                call.reject(e.message ?: "sendKeepalive failed")
+            }
+        }
+    }
+
     @PluginMethod
     fun disconnect(call: PluginCall) {
         scope.launch {

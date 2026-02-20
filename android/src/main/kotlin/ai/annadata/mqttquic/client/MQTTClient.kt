@@ -71,6 +71,9 @@ class MQTTClient {
     private val pendingSubacks = mutableMapOf<Int, CompletableDeferred<Pair<ByteArray, Int>>>()
     /** Pending UNSUBACK by packet ID. Message loop completes when UNSUBACK is read. */
     private val pendingUnsubacks = mutableMapOf<Int, CompletableDeferred<Unit>>()
+    /** Pending PINGRESP for sendMqttPing(). Message loop completes when PINGRESP is read. */
+    @Volatile
+    private var pendingPingresp: CompletableDeferred<Unit>? = null
     private val lock = Mutex()
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -501,6 +504,37 @@ class MQTTClient {
             pendingSubacks.clear()
             pendingUnsubacks.values.forEach { it.completeExceptionally(cause) }
             pendingUnsubacks.clear()
+            pendingPingresp?.completeExceptionally(cause)
+            pendingPingresp = null
+        }
+    }
+
+    /**
+     * Send MQTT PINGREQ and wait for PINGRESP. Resets server's idle timer.
+     * Returns true if PINGRESP received within timeout, false on timeout or error.
+     */
+    suspend fun sendMqttPing(timeoutMs: Long = 5000): Boolean {
+        if (getState() != State.CONNECTED) return false
+        val (w, defToAwait) = lock.withLock {
+            val existing = pendingPingresp
+            if (existing != null) return@withLock (null as MQTTStreamWriter?) to existing
+            val deferred = CompletableDeferred<Unit>()
+            pendingPingresp = deferred
+            writer to deferred
+        }
+        return try {
+            if (w != null) {
+                w.write(MQTTProtocol.buildPingreq())
+                w.drain()
+            }
+            if (defToAwait != null) withTimeout(timeoutMs) { defToAwait.await() }
+            true
+        } catch (e: Exception) {
+            lock.withLock {
+                pendingPingresp?.completeExceptionally(e)
+                pendingPingresp = null
+            }
+            false
         }
     }
 
@@ -569,6 +603,12 @@ class MQTTClient {
                                 val pr = MQTTProtocol.buildPingresp()
                                 it.write(pr)
                                 it.drain()
+                            }
+                        }
+                        MQTTMessageType.PINGRESP -> {
+                            lock.withLock {
+                                pendingPingresp?.complete(Unit)
+                                pendingPingresp = null
                             }
                         }
                         MQTTMessageType.PUBLISH -> {

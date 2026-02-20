@@ -7,6 +7,7 @@ import type {
   MqttQuicPingOptions,
   MqttQuicPublishOptions,
   MqttQuicSubscribeOptions,
+  MqttQuicSendKeepaliveOptions,
   MqttQuicTestHarnessOptions,
 } from './definitions';
 
@@ -40,6 +41,12 @@ export class MqttQuicWeb extends WebPlugin {
   /** Web: no UDP; resolves ok if host looks valid. Native uses UDP reachability check. */
   async ping(_options: MqttQuicPingOptions): Promise<{ ok: boolean }> {
     return Promise.resolve({ ok: true });
+  }
+
+  /** Web: mqtt.js/WT handle keepalive; return ok if connected. */
+  async sendKeepalive(_options?: MqttQuicSendKeepaliveOptions): Promise<{ ok: boolean }> {
+    const connected = this.client?.connected ?? this.wtConnected;
+    return Promise.resolve({ ok: !!connected });
   }
 
   async connect(options: MqttQuicConnectOptions): Promise<{ connected: boolean }> {

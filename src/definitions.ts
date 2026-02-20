@@ -74,7 +74,14 @@ export interface MqttQuicPingOptions {
   port?: number;
 }
 
+export interface MqttQuicSendKeepaliveOptions {
+  /** Timeout in ms to wait for PINGRESP (default 5000, min 1000, max 15000). */
+  timeoutMs?: number;
+}
+
 export interface MqttQuicPlugin {
+  /** Send MQTT PINGREQ and wait for PINGRESP. Resets server idle timer. Requires connected state. */
+  sendKeepalive(options?: MqttQuicSendKeepaliveOptions): Promise<{ ok: boolean }>;
   ping(options: MqttQuicPingOptions): Promise<{ ok: boolean }>;
   connect(options: MqttQuicConnectOptions): Promise<{ connected: boolean }>;
   disconnect(): Promise<void>;
