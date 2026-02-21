@@ -46,6 +46,8 @@ public final class MQTTClient {
     private var subackContinuation: CheckedContinuation<Data, Error>?
     /// Handoff from message loop to unsubscribe() for UNSUBACK.
     private var unsubackContinuation: CheckedContinuation<Data, Error>?
+    /// Pending PINGRESP for sendMqttPing(). Message loop completes when PINGRESP is read.
+    private var pendingPingresp: CheckedContinuation<Void, Error>?
     private let lock = NSLock()
 
     public init(protocolVersion: ProtocolVersion = .auto) {
@@ -345,6 +347,8 @@ public final class MQTTClient {
         subackContinuation = nil
         let unsubCont = unsubackContinuation
         unsubackContinuation = nil
+        let pingCont = pendingPingresp
+        pendingPingresp = nil
         let w = writer
         let version = activeProtocolVersion
         quicClient = nil
@@ -358,6 +362,7 @@ public final class MQTTClient {
         lock.unlock()
         subCont?.resume(throwing: MQTTProtocolError.insufficientData("disconnected"))
         unsubCont?.resume(throwing: MQTTProtocolError.insufficientData("disconnected"))
+        pingCont?.resume(throwing: MQTTProtocolError.insufficientData("disconnected"))
 
         if let w = w {
             let data: Data
@@ -401,6 +406,55 @@ public final class MQTTClient {
         }
         let (rem, _) = try MQTTProtocol.decodeRemainingLength(fixed, offset: 1)
         return (fixed[0], rem, fixed)
+    }
+
+    /// Send MQTT PINGREQ and wait for PINGRESP. Resets server's idle timer. Returns true if PINGRESP received within timeout.
+    public func sendMqttPing(timeoutMs: UInt64 = 5000) async -> Bool {
+        guard case .connected = getState() else { return false }
+        lock.lock()
+        if pendingPingresp != nil {
+            lock.unlock()
+            return false
+        }
+        let w = writer
+        lock.unlock()
+        do {
+            try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+                lock.lock()
+                pendingPingresp = cont
+                lock.unlock()
+                Task {
+                    try? await Task.sleep(nanoseconds: timeoutMs * 1_000_000)
+                    self.lock.lock()
+                    if let c = self.pendingPingresp {
+                        self.pendingPingresp = nil
+                        c.resume(throwing: MQTTProtocolError.insufficientData("PINGRESP timeout"))
+                    }
+                    self.lock.unlock()
+                }
+                if let w = w {
+                    Task {
+                        do {
+                            try await w.write(MQTTProtocol.buildPingreq())
+                            try await w.drain()
+                        } catch {
+                            self.lock.lock()
+                            if let c = self.pendingPingresp {
+                                self.pendingPingresp = nil
+                                c.resume(throwing: error)
+                            }
+                            self.lock.unlock()
+                        }
+                    }
+                }
+            }
+            return true
+        } catch {
+            lock.lock()
+            pendingPingresp = nil
+            lock.unlock()
+            return false
+        }
     }
 
     /// Send PINGREQ at effectiveKeepalive interval so server sees activity and does not close (idle/keepalive). [MQTT-3.1.2-20]
@@ -493,6 +547,12 @@ public final class MQTTClient {
                             try await w.write(Data(pr))
                             try await w.drain()
                         }
+                    case MQTTMessageType.PINGRESP.rawValue:
+                        self.lock.lock()
+                        let pingCont = self.pendingPingresp
+                        self.pendingPingresp = nil
+                        self.lock.unlock()
+                        pingCont?.resume()
                     case MQTTMessageType.PUBLISH.rawValue:
                         let qos = (msgType >> 1) & 0x03
                         let topic: String
@@ -550,6 +610,8 @@ public final class MQTTClient {
                         subackContinuation = nil
                         unsubackContinuation?.resume(throwing: error)
                         unsubackContinuation = nil
+                        pendingPingresp?.resume(throwing: error)
+                        pendingPingresp = nil
                         state = .disconnected
                         lock.unlock()
                     }

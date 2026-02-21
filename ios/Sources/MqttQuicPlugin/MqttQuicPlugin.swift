@@ -15,6 +15,7 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "MqttQuic"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "ping", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "sendKeepalive", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "connect", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "disconnect", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "publish", returnType: CAPPluginReturnPromise),
@@ -26,6 +27,19 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
     private var client = MQTTClient(protocolVersion: .auto)
 
     @objc override public func load() {}
+
+    @objc func sendKeepalive(_ call: CAPPluginCall) {
+        let timeoutMs = UInt64(call.getInt("timeoutMs") ?? 5000)
+        let clamped = min(max(timeoutMs, 1000), 15000)
+        Task {
+            do {
+                let ok = await client.sendMqttPing(timeoutMs: clamped)
+                DispatchQueue.main.async { call.resolve(["ok": ok]) }
+            } catch {
+                DispatchQueue.main.async { call.reject("\(error)") }
+            }
+        }
+    }
 
     @objc func ping(_ call: CAPPluginCall) {
         let host = call.getString("host") ?? ""
@@ -120,14 +134,12 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
                 // Forward every incoming PUBLISH to JS so addListener('message', ...) receives topic + payload (matches Android)
                 client.onPublish = { [weak self] topic, payload in
                     guard let self = self else { return }
-                    let payloadStr: String
-                    if let str = String(data: payload, encoding: .utf8) {
-                        payloadStr = str
-                    } else {
-                        payloadStr = payload.base64EncodedString()
-                    }
+                    let payloadStr: String = {
+                        if let str = String(data: payload, encoding: .utf8) { return str }
+                        return payload.base64EncodedString()
+                    }()
                     DispatchQueue.main.async {
-                        self.notifyListeners("message", data: ["topic": topic, "payload": payloadStr])
+                        self.notifyListeners("message", data: ["topic": topic as String, "payload": payloadStr as String])
                     }
                 }
                 try await client.connect(
