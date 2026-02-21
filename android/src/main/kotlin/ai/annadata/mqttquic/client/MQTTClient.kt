@@ -613,30 +613,35 @@ class MQTTClient {
                         }
                         MQTTMessageType.PUBLISH -> {
                             val qos = (msgType.toInt() shr 1) and 0x03
-                            val (topic, packetId, payload) = lock.withLock {
-                                if (activeProtocolVersion == MQTTProtocolLevel.V5) {
-                                    MQTT5Protocol.parsePublishV5(rest, 0, qos, topicAliasMap)
-                                } else {
-                                    MQTTProtocol.parsePublish(rest, 0, qos)
-                                }
-                            }
-
-                            val (cb, globalCb) = lock.withLock {
-                                subscribedTopics[topic] to onPublish
-                            }
-                            globalCb?.invoke(topic, payload)
-                            cb?.invoke(payload)
-
-                            if (qos >= 1 && packetId != null) {
-                                val w = lock.withLock { writer }
-                                w?.let {
-                                    if (qos == 1) {
-                                        it.write(MQTTProtocol.buildPuback(packetId))
+                            try {
+                                val (topic, packetId, payload) = lock.withLock {
+                                    if (activeProtocolVersion == MQTTProtocolLevel.V5) {
+                                        MQTT5Protocol.parsePublishV5(rest, 0, qos, topicAliasMap)
                                     } else {
-                                        it.write(MQTTProtocol.buildPubrec(packetId))
+                                        MQTTProtocol.parsePublish(rest, 0, qos)
                                     }
-                                    it.drain()
                                 }
+                                val (cb, globalCb) = lock.withLock {
+                                    subscribedTopics[topic] to onPublish
+                                }
+                                globalCb?.invoke(topic, payload)
+                                cb?.invoke(payload)
+
+                                if (qos >= 1 && packetId != null) {
+                                    val w = lock.withLock { writer }
+                                    w?.let {
+                                        if (qos == 1) {
+                                            it.write(MQTTProtocol.buildPuback(packetId))
+                                        } else {
+                                            it.write(MQTTProtocol.buildPubrec(packetId))
+                                        }
+                                        it.drain()
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                // PUBLISH parse failed: log and skip this message (don't disconnect)
+                                val hex = rest.take(64).joinToString("") { "%02x".format(it) }
+                                Log.w("MQTTClient", "PUBLISH parse failed: ${e.message} restLen=${rest.size} hex=$hex", e)
                             }
                         }
                         MQTTMessageType.PUBREL -> {

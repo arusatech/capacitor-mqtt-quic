@@ -121,7 +121,10 @@ class MqttQuicPlugin : Plugin() {
                     } catch (_: Exception) {
                         Base64.encodeToString(payload, Base64.NO_WRAP)
                     }
-                    val data = JSObject().put("topic", topic).put("payload", payloadStr)
+                    // Ensure non-null strings so Capacitor bridge never receives undefined
+                    val safeTopic = topic ?: ""
+                    val safePayload = payloadStr ?: ""
+                    val data = JSObject().put("topic", safeTopic).put("payload", safePayload)
                     Handler(Looper.getMainLooper()).post {
                         notifyListeners("message", data)
                     }

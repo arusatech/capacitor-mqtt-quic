@@ -555,42 +555,48 @@ public final class MQTTClient {
                         pingCont?.resume()
                     case MQTTMessageType.PUBLISH.rawValue:
                         let qos = (msgType >> 1) & 0x03
-                        let topic: String
-                        let packetId: UInt16?
-                        let payload: Data
-                        self.lock.lock()
-                        let version = self.activeProtocolVersion
-                        if version == MQTTProtocolLevel.v5 {
-                            var map = self.topicAliasMap
-                            self.lock.unlock()
-                            (topic, packetId, payload) = try MQTT5Protocol.parsePublishV5(Data(rest), offset: 0, qos: UInt8(qos), topicAliasMap: &map)
+                        do {
+                            let topic: String
+                            let packetId: UInt16?
+                            let payload: Data
                             self.lock.lock()
-                            self.topicAliasMap = map
-                            self.lock.unlock()
-                        } else {
-                            self.lock.unlock()
-                            let (t, pid, pl, _) = try MQTTProtocol.parsePublish(Data(rest), offset: 0, qos: UInt8(qos))
-                            topic = t
-                            packetId = pid
-                            payload = pl
-                        }
-
-                        self.lock.lock()
-                        let cb = self.subscribedTopics[topic]
-                        let globalCb = self.onPublish
-                        self.lock.unlock()
-                        globalCb?(topic, payload)
-                        cb?(payload)
-
-                        if qos >= 1, let pid = packetId {
-                            self.lock.lock()
-                            let wPuback = self.writer
-                            self.lock.unlock()
-                            if let wPuback = wPuback {
-                                let puback = MQTTProtocol.buildPuback(packetId: pid)
-                                try await wPuback.write(Data(puback))
-                                try await wPuback.drain()
+                            let version = self.activeProtocolVersion
+                            if version == MQTTProtocolLevel.v5 {
+                                var map = self.topicAliasMap
+                                self.lock.unlock()
+                                (topic, packetId, payload) = try MQTT5Protocol.parsePublishV5(Data(rest), offset: 0, qos: UInt8(qos), topicAliasMap: &map)
+                                self.lock.lock()
+                                self.topicAliasMap = map
+                                self.lock.unlock()
+                            } else {
+                                self.lock.unlock()
+                                let (t, pid, pl, _) = try MQTTProtocol.parsePublish(Data(rest), offset: 0, qos: UInt8(qos))
+                                topic = t
+                                packetId = pid
+                                payload = pl
                             }
+
+                            self.lock.lock()
+                            let cb = self.subscribedTopics[topic]
+                            let globalCb = self.onPublish
+                            self.lock.unlock()
+                            globalCb?(topic, payload)
+                            cb?(payload)
+
+                            if qos >= 1, let pid = packetId {
+                                self.lock.lock()
+                                let wPuback = self.writer
+                                self.lock.unlock()
+                                if let wPuback = wPuback {
+                                    let puback = MQTTProtocol.buildPuback(packetId: pid)
+                                    try await wPuback.write(Data(puback))
+                                    try await wPuback.drain()
+                                }
+                            }
+                        } catch {
+                            // PUBLISH parse failed: log and skip this message (don't disconnect)
+                            let hex = rest.prefix(64).map { String(format: "%02x", $0) }.joined()
+                            print("[MqttQuic] PUBLISH parse failed: \(error) restLen=\(rest.count) hex=\(hex)")
                         }
                     default:
                         break

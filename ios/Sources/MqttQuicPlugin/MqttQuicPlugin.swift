@@ -139,7 +139,7 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
                         return payload.base64EncodedString()
                     }()
                     DispatchQueue.main.async {
-                        self.notifyListeners("message", data: ["topic": topic as String, "payload": payloadStr as String])
+                        self.notifyListeners("message", data: ["topic": topic, "payload": payloadStr])
                     }
                 }
                 try await client.connect(

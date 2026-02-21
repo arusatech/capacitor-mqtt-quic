@@ -233,6 +233,20 @@ class QuicClient {
     state.recv_buf.insert(state.recv_buf.end(), data, data + datalen);
     LOGI("recv stream data stream_id=%" PRId64 " len=%zu recv_buf_total=%zu",
          (int64_t)stream_id, datalen, state.recv_buf.size());
+    if (datalen > 2 && datalen <= 32) {
+      char hex[128];
+      size_t n = datalen < 16 ? datalen : 16u;
+      char *p = hex;
+      for (size_t i = 0; i < n && p < hex + sizeof(hex) - 4; i++)
+        p += snprintf(p, (size_t)(hex + sizeof(hex) - p), "%02x", data[i]);
+      LOGI("recv first bytes (type 0x%02x = %s) hex=%s",
+           (unsigned)data[0],
+           (data[0] & 0xF0) == 0x30 ? "PUBLISH" : (data[0] == (uint8_t)0xd0 ? "PINGRESP" : "other"),
+           hex);
+    } else if (datalen > 32) {
+      LOGI("recv large chunk len=%zu first_byte=0x%02x (PUBLISH=0x30)",
+          datalen, (unsigned)data[0]);
+    }
     if (flags & NGTCP2_STREAM_DATA_FLAG_FIN) {
       state.fin_received = true;
     }
