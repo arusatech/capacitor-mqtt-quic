@@ -8,9 +8,12 @@ MQTT-over-QUIC Capacitor plugin for **iOS**, **Android**, and **Web (browser/PWA
 - ✅ **MQTT 5.0** support with full properties and reason codes
 - ✅ **MQTT 3.1.1** support (backward compatible)
 - ✅ Automatic protocol negotiation (tries 5.0, falls back to 3.1.1)
-- ✅ QUIC transport (ngtcp2) - currently using stubs (see ngtcp2 build section)
+- ✅ QUIC transport (ngtcp2 + WolfSSL) on native; WSS or WebTransport on web
 - ✅ Transport abstraction (StreamReader/StreamWriter)
-- ✅ Full MQTT client API (connect, publish, subscribe, unsubscribe, disconnect)
+- ✅ Full MQTT client API: `connect`, `publish`, `subscribe`, `unsubscribe`, `disconnect`
+- ✅ **sendKeepalive** – Send MQTT PINGREQ, wait for PINGRESP; resets server idle timer
+- ✅ **ping** – Host reachability check (native: UDP; web: returns ok if host looks valid)
+- ✅ **testHarness** – Connect → subscribe → publish → disconnect smoke test
 
 ## Structure
 
@@ -61,6 +64,31 @@ await MqttQuic.unsubscribe({ topic: 'sensors/+' });
 
 // Disconnect
 await MqttQuic.disconnect();
+```
+
+### sendKeepalive – Manual MQTT Ping
+
+Send MQTT PINGREQ and wait for PINGRESP. Resets the server's idle timer and confirms the connection is alive. Use when you need to keep the session active or verify connectivity without publishing.
+
+**Native (iOS/Android):** Sends PINGREQ, waits for PINGRESP within `timeoutMs`.  
+**Web:** Returns `{ ok: !!connected }` (mqtt.js and WebTransport handle keepalive internally).
+
+```ts
+const { ok } = await MqttQuic.sendKeepalive({
+  timeoutMs: 5000  // optional; default 5000, min 1000, max 15000
+});
+// ok: true if PINGRESP received (native) or connected (web); false on timeout or error
+```
+
+### ping – Host Reachability
+
+Check if a host is reachable. **Native (iOS/Android):** performs a UDP reachability check. **Web:** returns `{ ok: true }` if the host looks valid (no raw UDP in browsers).
+
+```ts
+const { ok } = await MqttQuic.ping({
+  host: 'mqtt.example.com',
+  port: 1884  // optional
+});
 ```
 
 ### Connection state and UI
@@ -159,7 +187,7 @@ Bundle the CA cert (never ship `ca.key`):
 
 ### Test Harness (QUIC Smoke Test)
 
-This runs: connect → subscribe → publish → disconnect.
+Runs: connect → subscribe → publish → disconnect.
 
 ```ts
 await MqttQuic.testHarness({
@@ -168,8 +196,8 @@ await MqttQuic.testHarness({
   clientId: 'mqttquic_test_client',
   topic: 'test/topic',
   payload: 'Hello QUIC!',
-  // optional CA override
-  caFile: '/path/to/ca-bundle.pem'
+  caFile: '/path/to/ca-bundle.pem',   // optional
+  webTransportUrl: 'https://...',      // optional; web only
 });
 ```
 
@@ -278,6 +306,8 @@ See [MQTT5_IMPLEMENTATION_COMPLETE.md](./docs/MQTT5_IMPLEMENTATION_COMPLETE.md) 
 
 ## TypeScript Interface
 
+Full API definitions (see `dist/esm/definitions.d.ts`):
+
 ```ts
 interface MqttQuicConnectOptions {
   host: string;
@@ -289,12 +319,16 @@ interface MqttQuicConnectOptions {
   keepalive?: number;
   caFile?: string;
   caPath?: string;
-  // MQTT 5.0 options
   protocolVersion?: '3.1.1' | '5.0' | 'auto';
   sessionExpiryInterval?: number;
   receiveMaximum?: number;
   maximumPacketSize?: number;
   topicAliasMaximum?: number;
+  // Web only: QUIC via WebTransport
+  webTransportUrl?: string;
+  webTransportDeviceId?: string;
+  webTransportAction?: string;
+  webTransportPath?: string;
 }
 
 interface MqttQuicPublishOptions {
@@ -302,7 +336,6 @@ interface MqttQuicPublishOptions {
   payload: string | Uint8Array;
   qos?: 0 | 1 | 2;
   retain?: boolean;
-  // MQTT 5.0 properties
   messageExpiryInterval?: number;
   contentType?: string;
   responseTopic?: string;
@@ -313,7 +346,6 @@ interface MqttQuicPublishOptions {
 interface MqttQuicSubscribeOptions {
   topic: string;
   qos?: 0 | 1 | 2;
-  // MQTT 5.0
   subscriptionIdentifier?: number;
 }
 
@@ -325,6 +357,29 @@ interface MqttQuicTestHarnessOptions {
   payload?: string;
   caFile?: string;
   caPath?: string;
+  webTransportUrl?: string;
+}
+
+interface MqttQuicPingOptions {
+  host: string;
+  port?: number;
+}
+
+interface MqttQuicSendKeepaliveOptions {
+  timeoutMs?: number;  // default 5000, min 1000, max 15000
+}
+
+type MqttQuicConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error';
+
+interface MqttQuicPlugin {
+  sendKeepalive(options?: MqttQuicSendKeepaliveOptions): Promise<{ ok: boolean }>;
+  ping(options: MqttQuicPingOptions): Promise<{ ok: boolean }>;
+  connect(options: MqttQuicConnectOptions): Promise<{ connected: boolean }>;
+  disconnect(): Promise<void>;
+  publish(options: MqttQuicPublishOptions): Promise<{ success: boolean }>;
+  subscribe(options: MqttQuicSubscribeOptions): Promise<{ success: boolean }>;
+  unsubscribe(options: { topic: string }): Promise<{ success: boolean }>;
+  testHarness(options: MqttQuicTestHarnessOptions): Promise<{ success: boolean }>;
 }
 ```
 
@@ -431,6 +486,32 @@ npm publish --access public
 
 See **docs/PRODUCTION_PUBLISH_STEPS.md** for the full checklist.
 
+### iOS: `MqttQuicLibs.xcframework does not contain a binary artifact`
+
+This happens when Capacitor's SPM resolves `Package.swift` but `ios/libs/MqttQuicLibs.xcframework` is missing. Common causes:
+
+1. **Fresh install / plugin update** – The package was packed/published without the xcframework.
+2. **Local development** – You use `file:../capacitor-mqtt-quic` or a local `.tgz` that was packed before building.
+
+**Fix (one-time per machine or per plugin change):**
+
+```bash
+cd node_modules/@annadata/capacitor-mqtt-quic
+./build-native.sh --ios-only
+cd ios && ./create-xcframework.sh
+cd ../..
+npx cap sync ios
+```
+
+Or from your app root, if you have this script:
+
+```bash
+npm run build:ios-mqtt-quic
+npx cap sync ios
+```
+
+**If you maintain the plugin:** Build the xcframework in the plugin repo before `npm pack` or `npm publish`. The `.npmignore` is configured so the xcframework is included when present, and consumers then get it with `npm install`.
+
 ### Connection error: `{"code":"UNIMPLEMENTED"}`
 
 Capacitor returns this when the **native plugin method is not found** on the current platform. Common causes and fixes:
@@ -499,7 +580,7 @@ The plugin runs in **browsers** (including PWA and `cap run web`) with the **sam
 **Why web can’t use ngtcp2 + WolfSSL:** Browsers do not expose raw UDP or the TLS APIs ngtcp2/WolfSSL need. So the native stack cannot run in the browser. On web: (1) **Default:** MQTT over **WebSocket (WSS)** via `mqtt.js`. (2) **Optional:** MQTT over **WebTransport** (QUIC)—pass `webTransportUrl` in `connect()` when your server supports WebTransport; the browser uses its built-in HTTP/3/QUIC stack.
 
 - **Connect:** `ws://host:port` or `wss://host:port` (the plugin uses WSS when port is 8884 or 443, otherwise `ws`)
-- **Same methods:** `MqttQuic.connect`, `publish`, `subscribe`, `unsubscribe`, `disconnect`, `testHarness`
+- **Same methods:** `MqttQuic.connect`, `publish`, `subscribe`, `unsubscribe`, `disconnect`, `sendKeepalive`, `ping`, `testHarness`
 
 **My MQTT+QUIC server is on port 1884 – can WSS connect?**  
 Port **1884** is usually **MQTT over QUIC** (UDP). A **WSS client cannot connect directly to 1884**, because WSS is TCP/WebSocket and 1884 is QUIC. You need one of:

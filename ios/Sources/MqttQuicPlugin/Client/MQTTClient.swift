@@ -38,6 +38,8 @@ public final class MQTTClient {
     private var keepaliveTask: Task<Void, Never>?
     private var nextPacketId: UInt16 = 1
     private var subscribedTopics: [String: (Data) -> Void] = [:]
+    /// Optional global callback for every incoming PUBLISH (topic, payload). Used by plugin to forward to JS. Matches Android.
+    var onPublish: ((String, Data) -> Void)?
     /// Per-connection Topic Alias map (alias -> topic name) for MQTT 5.0 incoming PUBLISH.
     private var topicAliasMap: [Int: String] = [:]
     /// Handoff from message loop to subscribe() so SUBACK is not consumed by the loop (avoids race and "insufficientData(SUBACK packet ID)").
@@ -515,7 +517,9 @@ public final class MQTTClient {
 
                         self.lock.lock()
                         let cb = self.subscribedTopics[topic]
+                        let globalCb = self.onPublish
                         self.lock.unlock()
+                        globalCb?(topic, payload)
                         cb?(payload)
 
                         if qos >= 1, let pid = packetId {

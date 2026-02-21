@@ -19,21 +19,16 @@ public final class QUICStreamReader: MQTTStreamReaderProtocol {
         try await stream.read(maxBytes: maxBytes)
     }
 
+    /// Read exactly n bytes. Waits indefinitely for data (matches Android behavior).
+    /// Previously had a 300ms limit which caused message loop to throw and disconnect before PUBLISH packets arrived.
     public func readexactly(_ n: Int) async throws -> Data {
         var acc = Data()
-        var emptyCount = 0
-        let maxEmptyRetries = 60  // ~300ms total (60 * 5ms) so SUBACK can arrive
         while acc.count < n {
             let chunk = try await stream.read(maxBytes: n - acc.count)
             if chunk.isEmpty {
-                emptyCount += 1
-                if emptyCount >= maxEmptyRetries {
-                    throw MQTTProtocolError.insufficientData("readexactly")
-                }
                 try await Task.sleep(nanoseconds: 5_000_000)  // 5ms
                 continue
             }
-            emptyCount = 0
             acc.append(chunk)
         }
         return acc

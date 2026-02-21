@@ -117,6 +117,19 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
                     break
                 }
                 client = MQTTClient(protocolVersion: protocolVersion)
+                // Forward every incoming PUBLISH to JS so addListener('message', ...) receives topic + payload (matches Android)
+                client.onPublish = { [weak self] topic, payload in
+                    guard let self = self else { return }
+                    let payloadStr: String
+                    if let str = String(data: payload, encoding: .utf8) {
+                        payloadStr = str
+                    } else {
+                        payloadStr = payload.base64EncodedString()
+                    }
+                    DispatchQueue.main.async {
+                        self.notifyListeners("message", data: ["topic": topic, "payload": payloadStr])
+                    }
+                }
                 try await client.connect(
                     host: host,
                     port: UInt16(port),
@@ -257,14 +270,7 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
         Task {
             do {
                 try await client.subscribe(topic: topic, qos: UInt8(min(qos, 2)), subscriptionIdentifier: subscriptionIdentifier)
-                // Deliver incoming PUBLISH for this topic to JS (avoids message loop having no handler; prevents stuck state)
-                client.onMessage(topic) { [weak self] payload in
-                    guard let self = self else { return }
-                    let str = String(data: payload, encoding: .utf8) ?? ""
-                    DispatchQueue.main.async {
-                        self.notifyListeners("message", data: ["topic": topic, "payload": str])
-                    }
-                }
+                // Incoming PUBLISH delivered via onPublish set in connect(); no per-topic handler needed
                 DispatchQueue.main.async { call.resolve(["success": true]) }
             } catch {
                 DispatchQueue.main.async { call.reject("\(error)") }

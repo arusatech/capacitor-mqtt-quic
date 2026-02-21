@@ -34,6 +34,9 @@ ios/install/**/*.dylib
 *.xcframework
 **/*.framework
 **/*.xcframework
+# Keep SPM binary target for Capacitor 8 (Package.swift)
+!ios/libs/MqttQuicLibs.xcframework
+!ios/libs/MqttQuicLibs.xcframework/**
 
 # Source dependencies (not needed in package)
 ref-code/
