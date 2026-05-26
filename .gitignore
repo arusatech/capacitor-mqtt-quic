@@ -102,3 +102,4 @@ coverage/
 .env
 .env.local
 .env.*.local
+ios/include/wolfssl/options.h
