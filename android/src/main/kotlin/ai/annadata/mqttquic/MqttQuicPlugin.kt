@@ -81,6 +81,7 @@ class MqttQuicPlugin : Plugin() {
         val sessionExpiryInterval = call.getInt("sessionExpiryInterval")
         val caFile = call.getString("caFile")
         val caPath = call.getString("caPath")
+        val insecureSkipVerify = call.getBoolean("insecureSkipVerify", false) == true
         
         val protocolVersion = when (protocolVersionStr) {
             "5.0" -> MQTTClient.ProtocolVersion.V5
@@ -107,6 +108,11 @@ class MqttQuicPlugin : Plugin() {
                     } else {
                         Os.setenv("MQTT_QUIC_CA_PATH", "", true)
                     }
+                    Os.setenv(
+                        "MQTT_QUIC_INSECURE_SKIP_VERIFY",
+                        if (insecureSkipVerify) "1" else "",
+                        true
+                    )
                 } catch (_: Exception) {
                     // Ignore env setup failures; native layer will report verification errors.
                 }

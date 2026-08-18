@@ -8,6 +8,8 @@
 #include <wolfssl/wolfcrypt/logging.h>
 
 #include <arpa/inet.h>
+#include <cerrno>
+#include <cstring>
 #include <fcntl.h>
 #include <netdb.h>
 #include <poll.h>
@@ -29,6 +31,30 @@
 #include <vector>
 
 namespace {
+
+static bool mqtt_quic_env_enabled(const char *name) {
+  const char *v = std::getenv(name);
+  return v != nullptr && v[0] != '\0' && !(v[0] == '0' && v[1] == '\0');
+}
+
+static void log_wolfssl_last_error(const char *prefix) {
+  unsigned long err = wolfSSL_ERR_peek_last_error();
+  char buf[256];
+  wolfSSL_ERR_error_string(err, buf);
+  fprintf(stderr, "%s: %s\n", prefix, buf);
+}
+
+static void log_peer_certificate(WOLFSSL *ssl) {
+  if (!ssl) return;
+  WOLFSSL_X509 *cert = wolfSSL_get_peer_certificate(ssl);
+  if (!cert) return;
+  char subj[256] = {};
+  char iss[256] = {};
+  wolfSSL_X509_NAME_oneline(wolfSSL_X509_get_subject_name(cert), subj, (int)sizeof(subj));
+  wolfSSL_X509_NAME_oneline(wolfSSL_X509_get_issuer_name(cert), iss, (int)sizeof(iss));
+  fprintf(stderr, "server cert subject=%s issuer=%s\n", subj, iss);
+  wolfSSL_X509_free(cert);
+}
 
 static uint64_t now_ts() {
   struct timespec tp;
@@ -253,6 +279,7 @@ class QuicClient {
       connected_ = true;
     }
     fprintf(stderr, "ngtcp2: handshake completed\n");
+    log_peer_certificate(ssl_);
     cv_state_.notify_all();
     return 0;
   }
@@ -326,7 +353,13 @@ class QuicClient {
       setError("ngtcp2_crypto_wolfssl_configure_client_context failed");
       return -1;
     }
-    wolfSSL_CTX_set_verify(ssl_ctx_, WOLFSSL_VERIFY_PEER, nullptr);
+
+    if (mqtt_quic_env_enabled("MQTT_QUIC_INSECURE_SKIP_VERIFY")) {
+      wolfSSL_CTX_set_verify(ssl_ctx_, WOLFSSL_VERIFY_NONE, nullptr);
+      fprintf(stderr, "MQTT_QUIC_INSECURE_SKIP_VERIFY set — TLS verify disabled\n");
+    } else {
+      wolfSSL_CTX_set_verify(ssl_ctx_, WOLFSSL_VERIFY_PEER, nullptr);
+    }
 
     /* Optional: enable wolfSSL debug output when MQTT_QUIC_WOLFSSL_DEBUG is set (e.g. for ERR_CRYPTO) */
     if (std::getenv("MQTT_QUIC_WOLFSSL_DEBUG") != nullptr) {
@@ -354,25 +387,36 @@ class QuicClient {
       return -1;
     }
 
+    if (mqtt_quic_env_enabled("MQTT_QUIC_INSECURE_SKIP_VERIFY")) {
+      return 0;
+    }
+
     bool ca_loaded = false;
     const char *ca_file = std::getenv("MQTT_QUIC_CA_FILE");
     const char *ca_path = std::getenv("MQTT_QUIC_CA_PATH");
-    if ((ca_file && ca_file[0] != '\0') || (ca_path && ca_path[0] != '\0')) {
-      if (wolfSSL_CTX_load_verify_locations(ssl_ctx_, ca_file, ca_path) != 1) {
+    const char *file_arg = (ca_file && ca_file[0] != '\0') ? ca_file : nullptr;
+    const char *path_arg = (ca_path && ca_path[0] != '\0') ? ca_path : nullptr;
+    if (file_arg || path_arg) {
+      if (wolfSSL_CTX_load_verify_locations(ssl_ctx_, file_arg, path_arg) != 1) {
         setError("Failed to load CA bundle from MQTT_QUIC_CA_FILE/CA_PATH");
         return -1;
       }
       ca_loaded = true;
+      fprintf(stderr, "Using CA from MQTT_QUIC_CA_FILE/CA_PATH\n");
     }
-    if (!ca_loaded) {
-      if (wolfSSL_CTX_set_default_verify_paths(ssl_ctx_) == 1) {
-        ca_loaded = true;
-      }
+    if (!ca_loaded && wolfSSL_CTX_load_system_CA_certs(ssl_ctx_) == 1) {
+      ca_loaded = true;
+      fprintf(stderr, "Using system CA certs\n");
+    }
+    if (!ca_loaded && wolfSSL_CTX_set_default_verify_paths(ssl_ctx_) == 1) {
+      ca_loaded = true;
+      fprintf(stderr, "Using default verify paths\n");
     }
     if (!ca_loaded) {
       setError("No CA bundle available for TLS verification");
       return -1;
     }
+    fprintf(stderr, "TLS CA loaded OK\n");
 
     return 0;
   }
@@ -538,6 +582,9 @@ class QuicClient {
       int rv = ngtcp2_conn_read_pkt(conn_, &path, &pi, buf, (size_t)nread,
                                     now_ts());
       if (rv != 0) {
+        if (rv == NGTCP2_ERR_CRYPTO) {
+          log_wolfssl_last_error("TLS/wolfSSL error");
+        }
         setError(ngtcp2_strerror(rv));
         return -1;
       }
@@ -631,7 +678,7 @@ class QuicClient {
 
       ssize_t nsend = send(fd_, buf, (size_t)nwrite, 0);
       if (nsend < 0) {
-        setError("send failed");
+        setError(std::string("send failed: ") + std::strerror(errno));
         return -1;
       }
     }

@@ -85,6 +85,7 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
         let sessionExpiryInterval = call.getInt("sessionExpiryInterval")
         let caFile = call.getString("caFile")
         let caPath = call.getString("caPath")
+        let insecureSkipVerify = call.getBool("insecureSkipVerify") ?? false
         
         let protocolVersion: MQTTClient.ProtocolVersion
         switch protocolVersionStr {
@@ -111,6 +112,11 @@ public class MqttQuicPlugin: CAPPlugin, CAPBridgedPlugin {
                     setenv("MQTT_QUIC_CA_PATH", caPath, 1)
                 } else {
                     unsetenv("MQTT_QUIC_CA_PATH")
+                }
+                if insecureSkipVerify {
+                    setenv("MQTT_QUIC_INSECURE_SKIP_VERIFY", "1", 1)
+                } else {
+                    unsetenv("MQTT_QUIC_INSECURE_SKIP_VERIFY")
                 }
                 if !NGTCP2Client.ping(host: host, port: UInt16(port)) {
                     DispatchQueue.main.async { call.reject("Server unreachable (UDP ping to \(host):\(port) failed). Check network and firewall.") }

@@ -9,6 +9,11 @@ export interface MqttQuicConnectOptions {
   // TLS certificate options (QUIC only)
   caFile?: string;  // Path to CA certificate bundle (PEM)
   caPath?: string;  // Path to CA certificate directory
+  /**
+   * Native only (debug). Skip TLS certificate verification (WolfSSL VERIFY_NONE).
+   * Sets env `MQTT_QUIC_INSECURE_SKIP_VERIFY`. Do not enable in production.
+   */
+  insecureSkipVerify?: boolean;
   // MQTT 5.0 options
   protocolVersion?: '3.1.1' | '5.0' | 'auto';
   sessionExpiryInterval?: number;  // Seconds (MQTT 5.0)
